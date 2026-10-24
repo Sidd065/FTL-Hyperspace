@@ -1427,7 +1427,9 @@ void StoreComplete::OnTouch(TouchAction action, int id, int x, int y, int initia
         if (selected->count == 0) buy.SetActive(false);
     }
 
-    if (buy.bHover && x >= orig->infoBoxLoc.x) return;
+    // As the game's own store: a touch on the info box's side keeps the pick while BUY is
+    // up (bHover is already off once a tap ends, so testing it lost the pick after a buy)
+    if (buy.bActive && x >= orig->infoBoxLoc.x) return;
 
     orig->infoBox.Clear();
     buy.SetActive(false);
