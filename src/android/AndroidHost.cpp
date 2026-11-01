@@ -144,13 +144,13 @@ static void AdjustForTranslator()
 
 extern "C" __attribute__((visibility("default"))) int hs_android_init(const hs_host_info *info, char *error, size_t errorSize)
 {
-    if (!info || info->version != HS_HOST_VERSION || info->size < sizeof(hs_host_info))
+    if (!info || info->version != HS_HOST_VERSION || info->size < offsetof(hs_host_info, hook_area))
     {
         snprintf(error, errorSize, "This Hyperspace build doesn't match the app (interface %u, expected %u).",
                  info ? info->version : 0u, (unsigned)HS_HOST_VERSION);
         return 1;
     }
-    g_host = *info;
+    memcpy(&g_host, info, info->size < sizeof(g_host) ? info->size : sizeof(g_host));
     g_logDir = info->log_dir ? info->log_dir : "";
 
     if (info->data_dir && chdir(info->data_dir) != 0)
@@ -170,6 +170,7 @@ extern "C" __attribute__((visibility("default"))) int hs_android_init(const hs_h
     }
     AdjustForTranslator();
     Arm64Detour::SetGameRange((uintptr_t)info->mach_header, info->image_size);
+    Arm64Detour::SetPoolArea(g_host.hook_area, g_host.hook_area_size);
     ZHL::SetMissingFunctionStub(MakeMissingStub);
 
     if (!ZHL::Init())
