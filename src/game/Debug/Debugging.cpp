@@ -4,6 +4,9 @@
 #include <boost/format.hpp>
 #include "CustomOptions.h"
 #include "HSVersion.h"
+#ifdef HS_ANDROID
+#include "android/IpadUI.h"
+#endif
 
 // Code for creation of FTL_HS.log and crashlogs
 
@@ -129,13 +132,25 @@ HOOK_METHOD(CApp, OnInit, () -> bool)
     return ret;
 }
 
+static void RenderVersionTag()
+{
+    std::string text = boost::str(boost::format("HS-%s") % HS_Version.toIdentifierString());
+#ifdef HS_ANDROID
+    // The screen's right edge depends on its shape; fonts measure 0 until they're loaded
+    int width = freetype::easy_measureWidth(51, text);
+    if (width > 0) freetype::easy_print(51, IpadUI::ScreenRight() - width, 0.f, text);
+#else
+    freetype::easy_printRightAlign(51, 1280.f, 0.f, text);
+#endif
+}
+
 HOOK_METHOD(MouseControl, OnRender, () -> void)
 {
     LOG_HOOK("HOOK_METHOD -> MouseControl::OnRender -> Begin (Debugging.cpp)\n")
     if(CustomOptionsManager::GetInstance()->altMode)
     {
         CSurface::GL_SetColor(COLOR_WHITE);
-        freetype::easy_printRightAlign(51, 1280.f, 0.f, boost::str(boost::format("HS-%s") % HS_Version.toIdentifierString()).c_str());
+        RenderVersionTag();
     }
     super();
 }
@@ -143,6 +158,6 @@ HOOK_METHOD(MouseControl, OnRender, () -> void)
 HOOK_METHOD(ResourceControl, RenderLoadingBar, (float initialProgress, float finalProgress) -> void)
 {
     LOG_HOOK("HOOK_METHOD -> ResourceControl::RenderLoadingBar -> Begin (Debugging.cpp)\n")
-    freetype::easy_printRightAlign(51, 1280.f, 0.f, boost::str(boost::format("HS-%s") % HS_Version.toIdentifierString()).c_str());
+    RenderVersionTag();
     super(initialProgress, finalProgress);
 }
