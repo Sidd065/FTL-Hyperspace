@@ -9,6 +9,14 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Rules for generated/: hook definitions, swig runtime, version header
 include(GeneratedSources)
 
+# FTL for iPad, run by ftl-android or ftl-linux
+option(HS_IPAD_LINUX "Build for FTL for iPad run by ftl-linux on aarch64 Linux" OFF)
+if(ANDROID OR HS_IPAD_LINUX)
+    set(HS_IPAD_PORT ON)
+else()
+    set(HS_IPAD_PORT OFF)
+endif()
+
 if(APPLE)
     # Prefer static libraries for dependencies on macOS
     set(BUILD_SHARED_LIBS OFF)
@@ -25,7 +33,7 @@ find_package(minizip REQUIRED)
 find_package(ZLIB REQUIRED)
 
 # Let vcpkg handle SDL3 automatically
-if(NOT ANDROID)
+if(NOT HS_IPAD_PORT)
     find_package(SDL3 CONFIG REQUIRED)
 endif()
 
@@ -51,7 +59,7 @@ set(
 )
 set_property(SOURCE ${swigfiles} PROPERTY USE_TARGET_INCLUDE_DIRECTORIES TRUE)
 set_property(SOURCE ${swigfiles} PROPERTY CPLUSPLUS ON)
-if(ANDROID)
+if(HS_IPAD_PORT)
     set_property(SOURCE ${swigfiles} APPEND PROPERTY COMPILE_DEFINITIONS HS_ANDROID)
 endif()
 
@@ -112,7 +120,7 @@ target_link_libraries(
     Boost::filesystem
     Threads::Threads
 )
-if(NOT ANDROID)
+if(NOT HS_IPAD_PORT)
     target_link_libraries(Hyperspace PRIVATE SDL3::SDL3)
 endif()
 
@@ -130,7 +138,7 @@ file(GLOB_RECURSE HS_SOURCES CONFIGURE_DEPENDS
 
 # Placed explicitly below
 list(FILTER HS_SOURCES EXCLUDE REGEX "/src/(zhl/|main\\.cpp$)")
-if(ANDROID)
+if(HS_IPAD_PORT)
     list(FILTER HS_SOURCES EXCLUDE REGEX "/src/features/(sdl-test|crash-detection)/")
 else()
     list(FILTER HS_SOURCES EXCLUDE REGEX "/src/android/")
@@ -145,7 +153,7 @@ file(GLOB ZHL_SOURCES CONFIGURE_DEPENDS
 # Generated hook definitions for this platform
 if(WIN32)
     set(FTLGAME_PLATFORM Win32)
-elseif(ANDROID)
+elseif(HS_IPAD_PORT)
     set(FTLGAME_PLATFORM iOSARM64)
 elseif(APPLE)
     set(FTLGAME_PLATFORM MacOSAMD64)
@@ -203,7 +211,7 @@ target_sources(
     src/main.cpp
 )
 
-if(NOT ANDROID)
+if(NOT HS_IPAD_PORT)
     # Vendored sources
     target_sources(Hyperspace PRIVATE third_party/detours/hde.cpp)
 
@@ -234,9 +242,15 @@ if(APPLE)
 endif()
 
 target_compile_definitions(Hyperspace PRIVATE _REENTRANT)
-if(ANDROID)
+if(HS_IPAD_PORT)
     set_target_properties(Hyperspace PROPERTIES PREFIX "lib" OUTPUT_NAME "Hyperspace")
-    target_link_libraries(Hyperspace PRIVATE log)
+    # Not every file that checks these includes PALPlatform.h
+    target_compile_definitions(Hyperspace PRIVATE HS_ANDROID=1 HS_APPLE_GAME=1)
+    if(ANDROID)
+        target_link_libraries(Hyperspace PRIVATE log)
+    else()
+        target_compile_definitions(Hyperspace PRIVATE HS_IPAD_LINUX=1)
+    endif()
     target_link_options(Hyperspace PRIVATE
         # Use the port's libunwind
         -unwindlib=none "${FTL_LIBCXX}/lib/libunwind.a"

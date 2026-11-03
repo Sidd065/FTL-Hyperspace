@@ -3,7 +3,7 @@
 
 #ifdef _WIN32
     #include "FTLGameWin32.h"
-#elif defined(__ANDROID__)
+#elif defined(HS_ANDROID)
     #include "FTLGameiOSARM64.h"
 #elif defined(__linux__)
     #ifdef __i386__

@@ -4,6 +4,7 @@
 #include <list>
 #include <stddef.h>
 #include <stdint.h>
+#include "../helpers/PALPlatform.h"
 
 class SigScan
 {
@@ -78,7 +79,7 @@ public:
 	static void *GetBaseAddress() {return (void*)s_pBase;}
 	static size_t GetBaseLength() {return s_iBaseLen;}
 	static void Init();
-#ifdef __ANDROID__
+#ifdef HS_ANDROID
 	static void SetGameImage(const void *machHeader, intptr_t slide);
 	static bool IsKnownGame();
 #endif

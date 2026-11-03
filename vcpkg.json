@@ -10,12 +10,12 @@
         "boost-lexical-cast",
         "boost-format",
         "boost-crc",
-        { "name": "discord-rpc", "platform": "!android" },
-        { "name": "opengl", "platform": "!android" },
+        { "name": "discord-rpc", "platform": "!android & !(linux & arm64)" },
+        { "name": "opengl", "platform": "!android & !(linux & arm64)" },
         "lua",
         {
             "name": "sdl3",
-            "platform": "!android",
+            "platform": "!android & !(linux & arm64)",
             "default-features": false,
             "features": [
                 { "name": "x11", "platform": "linux" },

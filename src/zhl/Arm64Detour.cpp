@@ -1,7 +1,8 @@
 #if defined(__aarch64__)
 
 #include "Arm64Detour.h"
-#ifdef __ANDROID__
+#include "../helpers/PALPlatform.h"
+#ifdef HS_ANDROID
     #include "android/MachO.h"
 #endif
 
@@ -179,7 +180,7 @@ namespace
         uintptr_t a = (uintptr_t)addr;
         if (g_pool.base && a >= (uintptr_t)g_pool.base && a < (uintptr_t)g_pool.base + g_pool.size)
             return PROT_READ | PROT_EXEC;
-#ifdef __ANDROID__
+#ifdef HS_ANDROID
         if (g_gameStart && a >= g_gameStart && a < g_gameStart + g_gameSize)
         {
             int vm = MachO::SegmentProtection((const void *)g_gameStart, a - g_gameStart);

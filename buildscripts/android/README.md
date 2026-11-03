@@ -6,6 +6,9 @@ The app loads this library after mapping the game, before any game code runs, an
 `hs_android_init` (`src/android/HyperspaceHost.h`) with where the game is. It does so
 while `Hyperspace.ftl` is among the mods applied in the app.
 
+The same source builds for the other ports of the iPad game: ftl-linux on aarch64 Linux
+([../linux/README.md](../linux/README.md)).
+
 ## What's here
 
 - `libzhlgen/test/functions/ios_arm64/1.6.21/`: the definitions, converted from the Mac

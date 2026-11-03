@@ -5,11 +5,13 @@
 #include "zhl_internal.h"
 #include "zhl_private.h"
 
+#ifdef __ANDROID__
 #include <android/log.h>
+#include <sys/system_properties.h>
+#endif
 #include <dlfcn.h>
 #include <elf.h>
 #include <link.h>
-#include <sys/system_properties.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -32,7 +34,11 @@ static void HostLog(int level, const char *fmt, ...)
     if (g_host.log)
         g_host.log(level, msg);
     else
+#ifdef __ANDROID__
         __android_log_write(level >= 2 ? ANDROID_LOG_ERROR : level == 1 ? ANDROID_LOG_WARN : ANDROID_LOG_INFO, "Hyperspace", msg);
+#else
+        fprintf(stderr, "Hyperspace: %s\n", msg);  // ftl-linux
+#endif
 }
 
 void PAL_AndroidShowError(const char *title, const char *message)
@@ -91,6 +97,7 @@ extern "C" int __ftl_find_macho_unwind(uintptr_t pc, uintptr_t *mh, uintptr_t *t
     return g_host.find_macho_unwind(pc, mh, textLen, cu, cuLen, eh, ehLen);
 }
 
+#ifdef __ANDROID__
 static bool OwnTextSection(uintptr_t *start, size_t *size)
 {
     Dl_info self;
@@ -141,6 +148,9 @@ static void AdjustForTranslator()
     else
         HostLog(0, "Hyperspace: running through %s; adjusted %d instructions it can't run", bridge, n);
 }
+#else
+static void AdjustForTranslator() {}
+#endif
 
 extern "C" __attribute__((visibility("default"))) int hs_android_init(const hs_host_info *info, char *error, size_t errorSize)
 {

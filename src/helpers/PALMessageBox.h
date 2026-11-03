@@ -1,6 +1,7 @@
 #pragma once
+#include "PALPlatform.h"
 
-#if defined(__ANDROID__)
+#if defined(HS_ANDROID)
     void PAL_AndroidShowError(const char *title, const char *message);
     inline void PAL_ShowError(const char *title, const char *message)
     {

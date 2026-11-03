@@ -9,7 +9,7 @@
 
 #ifdef _WIN32
     #include <windows.h>
-#elif defined(__ANDROID__)
+#elif defined(HS_ANDROID)
     #include <stdio.h>
     #include <inttypes.h>
     #include "android/MachO.h"
@@ -356,7 +356,7 @@ void SigScan::Init()
 	s_iBaseLen = pe->OptionalHeader.SizeOfImage;
 	s_pLastAddress = s_pBase;
 }
-#elif defined(__ANDROID__)
+#elif defined(HS_ANDROID)
 static const void *s_gameHeader = nullptr;
 static intptr_t s_gameSlide = 0;
 

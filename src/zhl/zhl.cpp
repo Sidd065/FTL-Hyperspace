@@ -49,7 +49,7 @@ bool ZHL::Init()
 	{
 		PAL_ShowError("Fatal Error", FunctionDefinition::GetLastError());
         fprintf(stderr, "Fatal Error %s:", FunctionDefinition::GetLastError());
-#ifdef __ANDROID__
+#ifdef HS_ANDROID
         return false;
 #else
         exit(1);
@@ -60,7 +60,7 @@ bool ZHL::Init()
 	{
 		PAL_ShowError("Fatal Error", FunctionHook_private::GetLastError());
         fprintf(stderr, "Fatal Error %s:", FunctionHook_private::GetLastError());
-#ifdef __ANDROID__
+#ifdef HS_ANDROID
         return false;
 #else
         exit(1);
@@ -156,7 +156,7 @@ int FunctionHook_private::Install()
 			snprintf(g_hookLastError, 1024, "Failed to install hook for %s: no definition matches the signature it declares (%s)", _plainName, _name);
 			return 0;
 		}
-#ifdef __ANDROID__
+#ifdef HS_ANDROID
 		Log("Skipped hook for %s: not in this build's definitions\n", _plainName);
 		return 1;
 #else
