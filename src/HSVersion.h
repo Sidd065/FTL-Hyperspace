@@ -16,7 +16,9 @@ Change the version numbers here
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
 
-#ifdef HS_IPAD_LINUX
+#ifdef HS_IPAD_SWITCH
+    #define BUILD_TGT " Switch"
+#elif defined(HS_IPAD_LINUX)
     #define BUILD_TGT " ARM Linux"
 #elif defined(__ANDROID__)
     #define BUILD_TGT " Android"

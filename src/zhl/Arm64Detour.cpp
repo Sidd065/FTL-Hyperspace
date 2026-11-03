@@ -9,7 +9,13 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/mman.h>
+#ifndef HS_IPAD_SWITCH
+    #include <sys/mman.h>
+#else
+    #define PROT_READ 1
+    #define PROT_WRITE 2
+    #define PROT_EXEC 4
+#endif
 #include <unistd.h>
 #include <mutex>
 #include <vector>
@@ -44,6 +50,9 @@ namespace
     Pool g_pool;
     std::mutex g_lock;
 
+    void *(*g_hostAlloc)(size_t) = nullptr;
+    int (*g_hostWrite)(void *, const void *, size_t) = nullptr;
+
     bool NearEnough(uintptr_t from, uintptr_t to)
     {
         intptr_t d = (intptr_t)to - (intptr_t)from;
@@ -57,7 +66,9 @@ namespace
 
     bool TakePool(Pool &pool, void *p, size_t size)
     {
-        mprotect(p, size, PROT_READ | PROT_EXEC);
+#ifndef HS_IPAD_SWITCH
+        if (!g_hostAlloc) mprotect(p, size, PROT_READ | PROT_EXEC);
+#endif
         pool.base = (uint8_t *)p;
         pool.size = size;
         pool.used = 0;
@@ -66,6 +77,9 @@ namespace
 
     bool MakePoolInGap(Pool &pool, uintptr_t lo, uintptr_t hi, size_t size)
     {
+#ifdef HS_IPAD_SWITCH
+        return false;
+#endif
         FILE *f = fopen("/proc/self/maps", "r");
         if (!f) return false;
         std::vector<std::pair<uintptr_t, uintptr_t>> used;
@@ -100,6 +114,7 @@ namespace
             uintptr_t dx = x > mid ? x - mid : mid - x, dy = y > mid ? y - mid : mid - y;
             return dx < dy;
         });
+#ifndef HS_IPAD_SWITCH
         for (uintptr_t want : candidates)
         {
             void *p = mmap((void *)want, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
@@ -111,11 +126,20 @@ namespace
             }
             return TakePool(pool, p, size);
         }
+#endif
         return false;
     }
 
     bool MakePoolNear(Pool &pool, uintptr_t lo, uintptr_t hi, size_t size)
     {
+        if (g_hostAlloc)
+        {
+            void *p = g_hostAlloc(size);
+            return p && PoolInReach((uintptr_t)p, size, lo, hi) && TakePool(pool, p, size);
+        }
+#ifdef HS_IPAD_SWITCH
+        return false;
+#endif
         if (MakePoolInGap(pool, lo, hi, size)) return true;
 
         const uintptr_t align = 1u << 16;
@@ -125,6 +149,7 @@ namespace
             {
                 uintptr_t want = dir == 0 ? ((hi + align - 1) & ~(align - 1)) + step
                                           : (lo & ~(align - 1)) - size - step;
+#ifndef HS_IPAD_SWITCH
                 void *p = mmap((void *)want, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
                 if (p == MAP_FAILED) continue;
                 if (!PoolInReach((uintptr_t)p, size, lo, hi))
@@ -133,6 +158,7 @@ namespace
                     continue;
                 }
                 return TakePool(pool, p, size);
+#endif
             }
         }
         return false;
@@ -151,9 +177,13 @@ namespace
 
     bool SetProt(void *addr, size_t size, int prot)
     {
+#ifdef HS_IPAD_SWITCH
+        return false;
+#else
         uintptr_t start = (uintptr_t)addr & ~(uintptr_t)(PageSize() - 1);
         uintptr_t end = ((uintptr_t)addr + size + PageSize() - 1) & ~(uintptr_t)(PageSize() - 1);
         return mprotect((void *)start, end - start, prot) == 0;
+#endif
     }
 
     int MapsProtection(uintptr_t a)
@@ -194,8 +224,9 @@ namespace
         return MapsProtection(a);
     }
 
-    bool WriteCode(void *dst, const void *src, size_t n, int prot)
+    bool RawWriteCode(void *dst, const void *src, size_t n, int prot)
     {
+        if (g_hostWrite) return g_hostWrite(dst, src, n) == 0;
         if (!SetProt(dst, n, prot | PROT_READ | PROT_WRITE)) return false;
         memcpy(dst, src, n);
         bool ok = SetProt(dst, n, prot);
@@ -203,9 +234,9 @@ namespace
         return ok;
     }
 
-    bool WriteCode(void *dst, const void *src, size_t n)
+    bool RawWriteCode(void *dst, const void *src, size_t n)
     {
-        return WriteCode(dst, src, n, CurrentProt(dst));
+        return RawWriteCode(dst, src, n, CurrentProt(dst));
     }
 
     struct Emitter
@@ -347,7 +378,7 @@ namespace
         uint8_t *p = PoolAlloc(e.Size(), pool);
         if (!p) return nullptr;
         size_t n = e.Finish(tmp);
-        return WriteCode(p, tmp, n) ? p : nullptr;
+        return RawWriteCode(p, tmp, n) ? p : nullptr;
     }
 
     uint32_t BranchTo(uintptr_t from, uintptr_t to)
@@ -358,6 +389,18 @@ namespace
 
 namespace Arm64Detour
 {
+    void SetHostCode(void *(*alloc)(size_t size), int (*write)(void *dst, const void *src, size_t n))
+    {
+        g_hostAlloc = alloc;
+        g_hostWrite = write;
+    }
+
+    bool WriteCode(void *dst, const void *src, size_t n)
+    {
+        std::lock_guard<std::mutex> lock(g_lock);
+        return RawWriteCode(dst, src, n);
+    }
+
     void SetGameRange(uintptr_t start, size_t size)
     {
         g_gameStart = start;
@@ -419,7 +462,7 @@ namespace Arm64Detour
         }
         int64_t d = ((int64_t)(uintptr_t)veneer - (int64_t)t) >> 2;
         uint32_t b = 0x14000000u | (uint32_t)(d & 0x3ffffff);
-        if (!WriteCode(target, &b, 4))
+        if (!RawWriteCode(target, &b, 4))
         {
             snprintf(error, errorSize, "could not make game code writable");
             return nullptr;
@@ -474,7 +517,7 @@ namespace Arm64Detour
             alignas(8) uint8_t tmp[sizeof(e.buf) + 8];
             size_t n = e.Finish(tmp);
             uint32_t b = BranchTo(a, (uintptr_t)stub);
-            if (!WriteCode(stub, tmp, n, PROT_READ | PROT_EXEC) || !WriteCode((void *)a, &b, 4, PROT_READ | PROT_EXEC))
+            if (!RawWriteCode(stub, tmp, n, PROT_READ | PROT_EXEC) || !RawWriteCode((void *)a, &b, 4, PROT_READ | PROT_EXEC))
             {
                 snprintf(error, errorSize, "could not write code");
                 return -1;
@@ -486,12 +529,14 @@ namespace Arm64Detour
 
     bool Unprotect(void *address, size_t size, int *oldProt)
     {
+        if (g_hostWrite) { *oldProt = 0; return true; }
         *oldProt = CurrentProt(address);
         return SetProt(address, size, *oldProt | PROT_READ | PROT_WRITE);
     }
 
     bool Reprotect(void *address, size_t size, int oldProt)
     {
+        if (g_hostWrite) return true;
         bool ok = SetProt(address, size, oldProt);
         if (oldProt & PROT_EXEC) FlushCode(address, size);
         return ok;

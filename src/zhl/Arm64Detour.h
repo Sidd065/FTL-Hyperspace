@@ -20,6 +20,9 @@ namespace Arm64Detour
 
     int ReplaceUntranslatable(void *start, size_t size, char *error, size_t errorSize);
 
+    void SetHostCode(void *(*alloc)(size_t size), int (*write)(void *dst, const void *src, size_t n));
+    bool WriteCode(void *dst, const void *src, size_t n);
+
     bool Unprotect(void *address, size_t size, int *oldProt);
     bool Reprotect(void *address, size_t size, int oldProt);
 }

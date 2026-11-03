@@ -25,7 +25,16 @@ typedef struct hs_host_info
 
     int (*find_macho_unwind)(uintptr_t pc, uintptr_t *mh, uintptr_t *text_len, uintptr_t *compact_unwind,
                              size_t *compact_unwind_len, uintptr_t *eh_frame, size_t *eh_frame_len);
+
+    /* Optional: executable memory near the game, and code writes (the Switch) */
+    void *(*alloc_code)(size_t size);
+    int (*write_code)(void *dst, const void *src, size_t n);
+
+    /* Optional: shows an error and returns once the player closed it */
+    void (*show_error)(const char *title, const char *message);
 } hs_host_info;
+
+#define HS_HOST_INFO_SIZE_V1 offsetof(hs_host_info, alloc_code)
 
 int hs_android_init(const hs_host_info *info, char *error, size_t error_size);
 typedef int (*hs_android_init_fn)(const hs_host_info *info, char *error, size_t error_size);

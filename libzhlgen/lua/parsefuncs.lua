@@ -1268,7 +1268,7 @@ local function writeFunctionWrappers(funcs, out)
 
 #ifdef _WIN32
     #define FUNC_NAKED __declspec(naked)
-#elif defined(__linux__) || defined(__APPLE__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(HS_IPAD_SWITCH)
     #if __clang__
     #elif __GNUC__ < 8
         #error "GCC version too old, must be at least version 8"
@@ -1751,7 +1751,7 @@ f([[#pragma once
     #define LIBZHL_INTERFACE __declspec(novtable)
     __declspec(noreturn) inline void __cdecl __NOP() {}
     #define LIBZHL_PLACEHOLDER {__NOP();}
-#elif defined(__linux__) || defined(__APPLE__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(HS_IPAD_SWITCH)
     #define LIBZHL_INTERFACE
     #define LIBZHL_PLACEHOLDER {\
         _Pragma("GCC diagnostic push") \

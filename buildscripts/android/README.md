@@ -7,7 +7,8 @@ The app loads this library after mapping the game, before any game code runs, an
 while `Hyperspace.ftl` is among the mods applied in the app.
 
 The same source builds for the other ports of the iPad game: ftl-linux on aarch64 Linux
-([../linux/README.md](../linux/README.md)).
+([../linux/README.md](../linux/README.md)) and ftl.nro on the Switch
+([../switch/README.md](../switch/README.md)).
 
 ## What's here
 

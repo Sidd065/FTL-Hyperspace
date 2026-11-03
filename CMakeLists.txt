@@ -9,9 +9,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Rules for generated/: hook definitions, swig runtime, version header
 include(GeneratedSources)
 
-# FTL for iPad, run by ftl-android or ftl-linux
+# FTL for iPad, run by ftl-android, ftl-linux or ftl.nro (Switch, static library without vcpkg)
 option(HS_IPAD_LINUX "Build for FTL for iPad run by ftl-linux on aarch64 Linux" OFF)
-if(ANDROID OR HS_IPAD_LINUX)
+option(HS_IPAD_SWITCH "Build for FTL for iPad run by ftl.nro on the Switch (static library)" OFF)
+set(HS_DEPS "" CACHE PATH "Switch: include/ and lib/ with Boost headers, Lua 5.3, minizip and zlib")
+if(ANDROID OR HS_IPAD_LINUX OR HS_IPAD_SWITCH)
     set(HS_IPAD_PORT ON)
 else()
     set(HS_IPAD_PORT OFF)
@@ -22,6 +24,17 @@ if(APPLE)
     set(BUILD_SHARED_LIBS OFF)
 endif()
 
+if(HS_IPAD_SWITCH)
+    # Only Boost's header-only parts are used (filesystem is for the crash reporter, left out)
+    set(Boost_INCLUDE_DIRS "${HS_DEPS}/include")
+    set(LUA_INCLUDE_DIR "${HS_DEPS}/include")
+    set(LUA_LIBRARIES "${HS_DEPS}/lib/liblua.a")
+    add_library(minizip::minizip INTERFACE IMPORTED)
+    set_target_properties(minizip::minizip PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${HS_DEPS}/include")
+    add_library(ZLIB::ZLIB INTERFACE IMPORTED)
+    add_library(Boost::filesystem INTERFACE IMPORTED)
+    add_library(Threads::Threads INTERFACE IMPORTED)
+else()
 # Let vcpkg handle Boost automatically
 find_package(Boost REQUIRED COMPONENTS filesystem system)
 
@@ -31,6 +44,7 @@ find_package(Lua REQUIRED)
 # Let vcpkg handle minizip automatically
 find_package(minizip REQUIRED)
 find_package(ZLIB REQUIRED)
+endif()
 
 # Let vcpkg handle SDL3 automatically
 if(NOT HS_IPAD_PORT)
@@ -41,9 +55,11 @@ if(WIN32)
     find_package(OpenGL REQUIRED)
 endif()
 
-# pthread
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
+# pthread (newlib's on the Switch, given above)
+if(NOT HS_IPAD_SWITCH)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+    find_package(Threads REQUIRED)
+endif()
 
 # SWIG
 find_package(SWIG REQUIRED COMPONENTS lua)
@@ -66,9 +82,14 @@ endif()
 # Name the binary as Hyperspace.dll instead of libHyperspace.dll
 set(CMAKE_SHARED_LIBRARY_PREFIX_CXX "")
 
+if(HS_IPAD_SWITCH)
+    set(HS_LIBRARY_TYPE STATIC)  # linked into ftl.nro: Horizon has no dynamic loader
+else()
+    set(HS_LIBRARY_TYPE SHARED)
+endif()
 swig_add_library(
     Hyperspace
-    TYPE SHARED
+    TYPE ${HS_LIBRARY_TYPE}
     LANGUAGE lua
     SOURCES ${swigfiles}
 )
@@ -248,6 +269,8 @@ if(HS_IPAD_PORT)
     target_compile_definitions(Hyperspace PRIVATE HS_ANDROID=1 HS_APPLE_GAME=1)
     if(ANDROID)
         target_link_libraries(Hyperspace PRIVATE log)
+    elseif(HS_IPAD_SWITCH)
+        target_compile_definitions(Hyperspace PRIVATE HS_IPAD_SWITCH=1)
     else()
         target_compile_definitions(Hyperspace PRIVATE HS_IPAD_LINUX=1)
     endif()

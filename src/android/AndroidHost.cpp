@@ -9,9 +9,12 @@
 #include <android/log.h>
 #include <sys/system_properties.h>
 #endif
+#ifndef HS_IPAD_SWITCH
 #include <dlfcn.h>
 #include <elf.h>
 #include <link.h>
+#endif
+#include <stddef.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -23,6 +26,7 @@ static hs_host_info g_host;
 static std::string g_logDir;
 static std::string g_zhlLogPath;
 static std::string g_lastError;
+static bool g_running;
 
 static void HostLog(int level, const char *fmt, ...)
 {
@@ -45,6 +49,8 @@ void PAL_AndroidShowError(const char *title, const char *message)
 {
     HostLog(2, "Hyperspace: %s: %s", title, message);
     g_lastError = std::string(title) + ": " + message;
+    if (g_running && g_host.show_error)
+        g_host.show_error(title, message);
 }
 
 std::string HS_LogPath(const char *name)
@@ -61,9 +67,15 @@ static void LogCallers()
     {
         uintptr_t ret = fp[1];
         if (!ret) break;
+#ifndef HS_IPAD_SWITCH
         Dl_info di = {};
+#endif
         if (game && ret >= game && ret < game + g_host.image_size)
             HostLog(2, "  from FTL %#lx", (unsigned long)(ret - g_host.slide));
+#ifdef HS_IPAD_SWITCH
+        else
+            HostLog(2, "  from %#lx", (unsigned long)ret);
+#else
         else if (!dladdr((void *)ret, &di) || !di.dli_fname)
             HostLog(2, "  from %#lx", (unsigned long)ret);
         else if (di.dli_sname)
@@ -71,6 +83,7 @@ static void LogCallers()
         else
             HostLog(2, "  from %s+%#lx", strrchr(di.dli_fname, '/') ? strrchr(di.dli_fname, '/') + 1 : di.dli_fname,
                     (unsigned long)(ret - (uintptr_t)di.dli_fbase));
+#endif
         uintptr_t *next = (uintptr_t *)fp[0];
         if (next <= fp) break;
         fp = next;
@@ -90,12 +103,14 @@ static void *MakeMissingStub(const char *name)
     return Arm64Detour::MakeTrap(name, MissingFunctionCalled);
 }
 
+#ifndef HS_IPAD_SWITCH
 extern "C" int __ftl_find_macho_unwind(uintptr_t pc, uintptr_t *mh, uintptr_t *textLen, uintptr_t *cu, size_t *cuLen,
                                        uintptr_t *eh, size_t *ehLen)
 {
     if (!g_host.find_macho_unwind) return 0;
     return g_host.find_macho_unwind(pc, mh, textLen, cu, cuLen, eh, ehLen);
 }
+#endif
 
 #ifdef __ANDROID__
 static bool OwnTextSection(uintptr_t *start, size_t *size)
@@ -154,13 +169,14 @@ static void AdjustForTranslator() {}
 
 extern "C" __attribute__((visibility("default"))) int hs_android_init(const hs_host_info *info, char *error, size_t errorSize)
 {
-    if (!info || info->version != HS_HOST_VERSION || info->size < sizeof(hs_host_info))
+    if (!info || info->version != HS_HOST_VERSION || info->size < HS_HOST_INFO_SIZE_V1)
     {
         snprintf(error, errorSize, "This Hyperspace build doesn't match the app (interface %u, expected %u).",
                  info ? info->version : 0u, (unsigned)HS_HOST_VERSION);
         return 1;
     }
-    g_host = *info;
+    g_host = hs_host_info{};
+    memcpy(&g_host, info, info->size < sizeof(g_host) ? info->size : sizeof(g_host));
     g_logDir = info->log_dir ? info->log_dir : "";
 
     if (info->data_dir && chdir(info->data_dir) != 0)
@@ -180,6 +196,15 @@ extern "C" __attribute__((visibility("default"))) int hs_android_init(const hs_h
     }
     AdjustForTranslator();
     Arm64Detour::SetGameRange((uintptr_t)info->mach_header, info->image_size);
+    if (g_host.alloc_code && g_host.write_code)
+        Arm64Detour::SetHostCode(g_host.alloc_code, g_host.write_code);
+#ifdef HS_IPAD_SWITCH
+    else
+    {
+        snprintf(error, errorSize, "The app gives Hyperspace no code memory.");
+        return 1;
+    }
+#endif
     ZHL::SetMissingFunctionStub(MakeMissingStub);
 
     if (!ZHL::Init())
@@ -189,6 +214,7 @@ extern "C" __attribute__((visibility("default"))) int hs_android_init(const hs_h
     }
     size_t poolSize = 0, poolUsed = Arm64Detour::PoolUsed(&poolSize);
     HostLog(0, "Hyperspace: hooks installed (%zuK of %zuK for trampolines)", poolUsed >> 10, poolSize >> 10);
+    g_running = true;
 
     G_->Initialize();
     HostLog(0, "Hyperspace: initialized");

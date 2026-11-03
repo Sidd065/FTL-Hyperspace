@@ -248,7 +248,7 @@ int NoOpDefinition::Load()
     for(unsigned int i = 0; i + 4 <= (unsigned int)m.length; i += 4)
     {
         const uint32_t nop = 0xd503201f;
-        memcpy((void*)(ptrToCode + i), &nop, 4);
+        Arm64Detour::WriteCode((void*)(ptrToCode + i), &nop, 4);
     }
     MEMPROT_REPROTECT(ptrToCode, noopingSize, dwOldProtect);
 #else
