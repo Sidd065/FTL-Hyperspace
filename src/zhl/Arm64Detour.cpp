@@ -407,6 +407,13 @@ namespace Arm64Detour
         g_gameSize = size;
     }
 
+    void SetPoolArea(void *base, size_t size)
+    {
+        std::lock_guard<std::mutex> lock(g_lock);
+        if (!base || g_pool.base) return;
+        if (PoolInReach((uintptr_t)base, size, g_gameStart, g_gameStart + g_gameSize)) TakePool(g_pool, base, size);
+    }
+
     size_t PoolUsed(size_t *capacity)
     {
         std::lock_guard<std::mutex> lock(g_lock);

@@ -205,6 +205,7 @@ extern "C" __attribute__((visibility("default"))) int hs_android_init(const hs_h
         return 1;
     }
 #endif
+    Arm64Detour::SetPoolArea(g_host.hook_area, g_host.hook_area_size);
     ZHL::SetMissingFunctionStub(MakeMissingStub);
 
     if (!ZHL::Init())

@@ -7,6 +7,8 @@ namespace Arm64Detour
 {
     void SetGameRange(uintptr_t start, size_t size);
 
+    void SetPoolArea(void *base, size_t size);
+
     size_t PoolUsed(size_t *capacity);
 
     enum
