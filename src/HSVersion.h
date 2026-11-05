@@ -19,9 +19,9 @@ Change the version numbers here
 #ifdef HS_IPAD_SWITCH
     #define BUILD_TGT " Switch"
 #elif defined(HS_IPAD_LINUX)
-    #define BUILD_TGT " ARM Linux"
+    #define BUILD_TGT " aarch64 Linux"
 #elif defined(__ANDROID__)
-    #define BUILD_TGT " Android"
+    #define BUILD_TGT " aarch64 Android"
 #elif defined(__linux__)
     #ifdef __i386__
         #define BUILD_TGT " x86"

@@ -19,7 +19,7 @@ the APK.
   linked for any page size (4K, 16K and 64K kernels), against the port's libc++ like on
   Android. vcpkg leaves out SDL3, OpenGL and discord-rpc for it, as for Android.
 - Without a host log callback, messages go to stderr instead of logcat.
-- The version string says "ARM Linux".
+- The version string says "aarch64 Linux".
 
 ## Building
 
