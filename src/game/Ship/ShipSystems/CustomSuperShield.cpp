@@ -285,6 +285,9 @@ HOOK_METHOD(CombatControl, RenderShipStatus, (Pointf pos, GL_Color color) -> voi
 
         CSurface::GL_PushMatrix();
         CSurface::GL_Translate(pos.x, pos.y, 0.0);
+#ifdef HS_ANDROID
+        CSurface::GL_Translate(0.0, 14.0, 0.0);
+#endif
 
         bool isHacked = currentTarget->shipManager->IsSystemHacked(0) > 1;
 
@@ -325,24 +328,30 @@ HOOK_METHOD(CombatControl, RenderShipStatus, (Pointf pos, GL_Color color) -> voi
                     superColor.a = 1.0;
             }
 
+#ifdef HS_ANDROID
+            int superBar_x = enemyShield.second * 23 - 3;
+            int superBar_y = 23;
+#else
             int superBar_x = enemyShield.second * 23;
+            int superBar_y = 35;
+#endif
 
             if (enemyShield.super.second == 5)
             {
-                superShieldBox5.SetPosition(superBar_x + 13, 35);
+                superShieldBox5.SetPosition(superBar_x + 13, superBar_y);
                 superShieldBox5.OnRender(GL_Color(1.0, 1.0, 1.0, 1.0));
             }
             else if (enemyShield.super.second == 12)
             {
-                superShieldBox12.SetPosition(superBar_x + 13, 35);
+                superShieldBox12.SetPosition(superBar_x + 13, superBar_y);
                 superShieldBox12.OnRender(GL_Color(1.0, 1.0, 1.0, 1.0));
             }
             else
             {
-                CSurface::GL_DrawRect(superBar_x + 13.f, 35.f, enemyShield.super.second*10+6, 13.f, GL_Color(0.0, 0.0, 0.0, 0.5));
-                CSurface::GL_DrawRectOutline(superBar_x + 13, 35, enemyShield.super.second*10+6, 13, GL_Color(1.0, 1.0, 1.0, 1.0), 2.f);
+                CSurface::GL_DrawRect(superBar_x + 13.f, superBar_y, enemyShield.super.second*10+6, 13.f, GL_Color(0.0, 0.0, 0.0, 0.5));
+                CSurface::GL_DrawRectOutline(superBar_x + 13, superBar_y, enemyShield.super.second*10+6, 13, GL_Color(1.0, 1.0, 1.0, 1.0), 2.f);
             }
-            CSurface::GL_DrawRect(superBar_x + 16.f, 38.f, enemyShield.super.first*10, 7.f, superColor);
+            CSurface::GL_DrawRect(superBar_x + 16.f, superBar_y + 3.f, enemyShield.super.first*10, 7.f, superColor);
         }
 
         CSurface::GL_PopMatrix();
@@ -361,7 +370,11 @@ HOOK_METHOD(CombatControl, RenderShipStatus, (Pointf pos, GL_Color color) -> voi
                 CSurface::GL_PushMatrix();
                 CSurface::GL_Translate(pos.x, pos.y, 0.0);
 
+#ifdef HS_ANDROID
+                CSurface::GL_DrawRect(enemyShield.second*23.f + 13.f, 40.f, enemyShield.super.first*10, 7.f, superColor);
+#else
                 CSurface::GL_DrawRect(enemyShield.second*23.f + 16.f, 38.f, enemyShield.super.first*10, 7.f, superColor);
+#endif
 
                 CSurface::GL_PopMatrix();
             }
