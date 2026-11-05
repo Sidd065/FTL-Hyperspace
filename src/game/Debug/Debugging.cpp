@@ -144,6 +144,20 @@ static void RenderVersionTag()
 #endif
 }
 
+#ifdef HS_ANDROID
+// FTL for iPad has no mouse cursor to draw the tag with, as the PC builds do; it goes
+// after the FPS counter instead, the last thing drawn before the frame is shown
+HOOK_METHOD(CFPS, OnRender, () -> void)
+{
+    LOG_HOOK("HOOK_METHOD -> CFPS::OnRender -> Begin (Debugging.cpp)\n")
+    super();
+    if(CustomOptionsManager::GetInstance()->altMode)
+    {
+        CSurface::GL_SetColor(COLOR_WHITE);
+        RenderVersionTag();
+    }
+}
+#else
 HOOK_METHOD(MouseControl, OnRender, () -> void)
 {
     LOG_HOOK("HOOK_METHOD -> MouseControl::OnRender -> Begin (Debugging.cpp)\n")
@@ -154,6 +168,7 @@ HOOK_METHOD(MouseControl, OnRender, () -> void)
     }
     super();
 }
+#endif
 
 HOOK_METHOD(ResourceControl, RenderLoadingBar, (float initialProgress, float finalProgress) -> void)
 {
