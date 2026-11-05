@@ -1546,13 +1546,30 @@ void CustomShipSelect::PlaceButtonsForTouch()
         ShipButtonList* buttonList = GetShipButtonListFromID(100 + shipId);
         if (!buttonList) continue;
 
+        // The game's button for this place is taller and 20 higher while its own
+        // ship is unlocked (room for the achievements), as on PC: take the place
+        // as a locked button and size each button for its own ship instead.
         ShipButton* place = shipSelect->shipButtons[i % 10];
+        Point pos = place->position;
+        Globals::Rect hitbox = place->hitbox;
+        if (!place->bShipLocked)
+        {
+            pos.y += 20;
+            hitbox.y += 20;
+            hitbox.h -= 40;
+        }
         for (int variant = 0; variant < 3; ++variant)
         {
             ShipButton* button = buttonList->GetButton(variant);
             if (!button) continue;
-            button->SetLocation(place->position);
-            button->hitbox = place->hitbox;
+            bool unlocked = !button->bShipLocked && !button->bNoExist;
+            button->SetLocation({pos.x, unlocked ? pos.y - 20 : pos.y});
+            button->hitbox = hitbox;
+            if (unlocked)
+            {
+                button->hitbox.y -= 20;
+                button->hitbox.h += 40;
+            }
         }
     }
 }
