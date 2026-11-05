@@ -331,6 +331,41 @@ HOOK_METHOD(CombatControl, constructor, () -> void)
         HullBars::GetInstance()->hullBarImage = new CachedImage("combatUI/box_hostiles_hull2.png", 889, 90);
     }
 }
+#else
+HOOK_METHOD(CombatControl, RenderShipStatus, (Pointf pos, GL_Color color) -> void)
+{
+    LOG_HOOK("HOOK_METHOD -> CombatControl::RenderShipStatus -> Begin (HullNumbers.cpp)\n")
+
+    g_overrideHullBar = true;
+    super(pos, color);
+    g_overrideHullBar = false;
+
+    HullBars *HBManager = HullBars::GetInstance();
+    int hull = this->GetCurrentTarget()->ship.hullIntegrity.first;
+    if (HBManager->enabledType == 1 && hull > HBManager->barWidth)
+    {
+        if (HBManager->hullBarImage == nullptr)
+        {
+            HBManager->hullBarImage = new CachedImage("combatUI/box_hostiles_hull2.png", 0, 0);
+        }
+
+        int ibar = hull / HBManager->barWidth;
+        float x1 = HBManager->barWidth / 22.f;
+        float x2 = ((float)(hull % HBManager->barWidth) / HBManager->barWidth) * (HBManager->barWidth / 22.f);
+
+        CSurface::GL_PushMatrix();
+        CSurface::GL_Translate(pos.x, pos.y, 0.0);
+
+        HBManager->hullBarImage->SetPartial(0.0, 0.0, x1, 1.0);
+        HBManager->hullBarImage->OnRender(HBManager->GetBarColor(ibar - 1));
+
+        HBManager->hullBarImage->SetPartial(0.0, 0.0, x2, 1.0);
+        HBManager->hullBarImage->OnRender(HBManager->GetBarColor(ibar));
+
+        CSurface::GL_PopMatrix();
+    }
+}
+#endif // HS_ANDROID
 
 HOOK_METHOD(CachedImage, SetPartial, (float x_start, float y_start, float x_size, float y_size) -> void)
 {
@@ -341,7 +376,11 @@ HOOK_METHOD(CachedImage, SetPartial, (float x_start, float y_start, float x_size
     {
         HullBars *HBManager = HullBars::GetInstance();
         std::pair<int, int> shipHp = enemyShip->ship.hullIntegrity;
+#ifdef HS_ANDROID
+        int barWidth = HBManager->barWidth;
+#else
         int barWidth = G_->GetCApp()->gui->combatControl.boss_visual ? HBManager->barWidthBoss : HBManager->barWidth;
+#endif
 
         if (HBManager->enabledType == 2 && shipHp.second > barWidth)
         {
@@ -356,6 +395,7 @@ HOOK_METHOD(CachedImage, SetPartial, (float x_start, float y_start, float x_size
     super(x_start, y_start, x_size, y_size);
 }
 
+#ifndef HS_ANDROID
 HOOK_METHOD_PRIORITY(ShipStatus, OnRender, 9999, () -> void)
 {
     LOG_HOOK("HOOK_METHOD_PRIORITY -> ShipStatus::OnRender -> Begin (HullNumbers.cpp)\n")
