@@ -1,6 +1,7 @@
 #!/bin/bash
 # One-time setup on an aarch64 Linux host: vcpkg plus the arm64-linux-ftl toolchain and
-# triplet. Also needs: clang and lld, cmake, ninja, swig, lua with lpeg and lfs, and
+# triplet. Also needs: clang and lld, cmake, ninja, swig, SDL3's development files, lua
+# with lpeg and lfs, and
 # the port's libc++ (see README.md).
 set -e
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )

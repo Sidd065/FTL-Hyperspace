@@ -17,8 +17,10 @@ applies, except what is about bionic and the APK.
 - No libc++ or libunwind of our own: the game runs under dyld with the system's libc++,
   which has the ABI it was built with, and the system's unwinder reads its unwind info.
   The `arm64-darwin-ftl` triplet and toolchain (`.devcontainer/`) build a plain macOS
-  arm64 dylib, which loads into the Catalyst process; vcpkg leaves out SDL3, OpenGL and
-  discord-rpc for it, as for the other iPad ports.
+  arm64 dylib, which loads into the Catalyst process; vcpkg leaves out OpenGL and
+  discord-rpc for it, as for the other iPad ports. SDL3 is vcpkg's macOS build, linked
+  into the dylib for Hyperspace's features (audio, controllers); it isn't tested in the
+  Catalyst process yet.
 - Writing code (`src/zhl/Arm64Detour.cpp`): the game's code is mapped from its signed
   file and `mprotect()` refuses to make it writable, so on macOS protections change with
   `mach_vm_protect()` and `VM_PROT_COPY` (a private copy of the page). A page is never

@@ -26,6 +26,17 @@ Horizon has no dynamic loader. ftl.nro calls `hs_android_init` as the other port
   `hyperspace.xml`, a mod's `Hyperspace.ErrorMessage` from Lua) the way the PC builds
   show a message box; ftl.nro opens the Switch's error applet. Without it they are only
   logged, as before.
+- SDL3, for Hyperspace's features (audio, controllers and their motion sensors; no
+  video): `build.sh` builds devkitPro's Switch port of SDL 3.4 (the `switch-sdl-3.4`
+  branch of [devkitPro/SDL](https://github.com/devkitPro/SDL), a pinned commit) into
+  `build-switch-deps/lib/libSDL3.a`, which ftl.nro links with Hyperspace. Its controller
+  driver is replaced by `sdl3/SDL_sysjoystick.c`, made for SDL inside an app that reads
+  the controllers itself: it leaves the app's controller setup alone (no
+  `padConfigureInput`, no controller applet) and so sees what ftl.nro supports (player 1
+  and handheld), lists only connected controllers and notices them coming and going,
+  rumbles with HD rumble's two bands, and reports the gyro and accelerometer as SDL
+  sensors. Audio is devkitPro's audren driver, next to the audout ftl.nro plays the
+  game's sound with.
 - No `dladdr`: the callers logged for a missing function are plain addresses (for
   `llvm-symbolizer` with ftl.elf). `__ftl_find_macho_unwind` is ftl.nro's own.
 
@@ -43,7 +54,8 @@ lld, cmake, ninja, swig 4.0, Lua 5.3 with lpeg and lfs, and curl:
     FTL_SWITCH_TOOLCHAIN=/path/to/the/port/switch/toolchain.cmake \
         buildscripts/switch/build.sh
 
-The result is `build-switch-release/libHyperspace.a`, with the Lua it was compiled
-against in `build-switch-deps/lib/liblua.a`. ftl.nro links both; most of Hyperspace's
+The result is `build-switch-release/libHyperspace.a`, with the Lua and SDL3 it was
+compiled against in `build-switch-deps/lib/` (`liblua.a`, `libSDL3.a`). ftl.nro links
+them all; most of Hyperspace's
 files only register their hooks from static constructors, so it links the library
 whole (`--whole-archive`).

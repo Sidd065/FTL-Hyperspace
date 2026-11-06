@@ -15,7 +15,7 @@
         "lua",
         {
             "name": "sdl3",
-            "platform": "!android & !(linux & arm64) & !(osx & arm64) & !ios",
+            "platform": "!(linux & arm64)",
             "default-features": false,
             "features": [
                 { "name": "x11", "platform": "linux" },

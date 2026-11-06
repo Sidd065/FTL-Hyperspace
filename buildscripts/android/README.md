@@ -72,6 +72,32 @@ binary and run it on any arm64 Linux or Android device, or under `qemu-aarch64`:
   `CustomStore.cpp` have examples. Screen positions for the iPad layout sit next to the PC
   ones in `#ifdef HS_ANDROID` blocks.
 
+## SDL3 (what the app needs to do)
+
+Hyperspace's features use SDL3 for audio and controllers (with rumble and motion
+sensors). vcpkg builds SDL 3.4 into `libHyperspace.so`, but SDL on Android works
+through its Java side, which only the app can provide. Until the app does the following,
+`PAL_SDLReady()` (`src/helpers/PALSDL.h`) is false and those features stay off; the game
+and the rest of Hyperspace are unaffected.
+
+1. Ship SDL's Java classes: `android-project/app/src/main/java/org/libsdl/app/` from the
+   source of the SDL release vcpkg builds (3.4.4 with the `builtin-baseline` in
+   `vcpkg.json`; the build log names it). The package name `org.libsdl.app` must stay. The app's activity stays its own; SDLActivity is
+   only needed for its static methods.
+2. Once, before `hs_android_init`, call `hs_android_sdl_setup(vm, activity, error, size)`
+   (`HyperspaceHost.h`) from a thread Java started, for example from a JNI method the
+   activity calls: JNI only finds the app's classes there. It registers SDL's native
+   methods and runs `SDL.setupJNI()`, `SDL.initialize()` and `SDL.setContext(activity)`.
+3. Forward controller input, as SDLActivity does: in `onGenericMotionEvent`, pass
+   joystick events to `SDLControllerManager.handleJoystickMotionEvent(event)`; in
+   `dispatchKeyEvent`, for devices where `SDLControllerManager.isDeviceSDLJoystick(deviceId)`,
+   pass key down/up to `SDLControllerManager.onNativePadDown/onNativePadUp(deviceId,
+   keyCode, scanCode)` and treat the event as handled when they return true.
+
+Rumble goes through Android's vibrator service; SDL reads motion sensors only from
+controllers it talks to directly over USB or Bluetooth (HIDAPI, `HIDDeviceManager`).
+None of this is tested on Android yet.
+
 ## Logs
 
 zhl.log and FTL_HS.log go to the app's log folder, so "Save logs" in the app's settings

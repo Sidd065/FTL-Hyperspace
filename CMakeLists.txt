@@ -48,8 +48,13 @@ find_package(minizip REQUIRED)
 find_package(ZLIB REQUIRED)
 endif()
 
-# Let vcpkg handle SDL3 automatically
-if(NOT HS_IPAD_PORT)
+# SDL3: vcpkg's. On aarch64 Linux the system's, which ftl-linux runs on too, so the game
+# and Hyperspace share one SDL. On the Switch the libnx build in HS_DEPS
+# (buildscripts/switch/sdl3.sh); ftl.nro links it with Hyperspace.
+if(HS_IPAD_SWITCH)
+    add_library(SDL3::SDL3 INTERFACE IMPORTED)
+    set_target_properties(SDL3::SDL3 PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${HS_DEPS}/include")
+else()
     find_package(SDL3 CONFIG REQUIRED)
 endif()
 
@@ -143,9 +148,7 @@ target_link_libraries(
     Boost::filesystem
     Threads::Threads
 )
-if(NOT HS_IPAD_PORT)
-    target_link_libraries(Hyperspace PRIVATE SDL3::SDL3)
-endif()
+target_link_libraries(Hyperspace PRIVATE SDL3::SDL3)
 
 # Sources belong in src/
 file(GLOB ROOT_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
@@ -162,7 +165,7 @@ file(GLOB_RECURSE HS_SOURCES CONFIGURE_DEPENDS
 # Placed explicitly below
 list(FILTER HS_SOURCES EXCLUDE REGEX "/src/(zhl/|main\\.cpp$)")
 if(HS_IPAD_PORT)
-    list(FILTER HS_SOURCES EXCLUDE REGEX "/src/features/(sdl-test|crash-detection)/")
+    list(FILTER HS_SOURCES EXCLUDE REGEX "/src/features/crash-detection/")
 else()
     list(FILTER HS_SOURCES EXCLUDE REGEX "/src/android/")
 endif()

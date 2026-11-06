@@ -16,6 +16,13 @@
 #include <elf.h>
 #include <link.h>
 #endif
+#include "helpers/PALSDL.h"
+
+#include <SDL3/SDL_hints.h>
+#include <SDL3/SDL_init.h>
+#define SDL_MAIN_HANDLED
+#include <SDL3/SDL_main.h>
+
 #include <stddef.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -169,6 +176,57 @@ static void AdjustForTranslator()
 static void AdjustForTranslator() {}
 #endif
 
+#ifdef __ANDROID__
+#include <jni.h>
+
+// SDL's, from its static library; the app doesn't load Hyperspace through Java
+extern "C" jint JNI_OnLoad(JavaVM *vm, void *reserved);
+
+static bool g_sdlReady;
+
+bool PAL_SDLReady()
+{
+    return g_sdlReady;
+}
+
+// Does what an SDL app's Java side does at start: SDL.setupJNI(), SDL.initialize(),
+// SDL.setContext(activity)
+static bool CallSDLJava(JNIEnv *env, const char *name, const char *sig, jobject arg)
+{
+    jclass sdl = env->FindClass("org/libsdl/app/SDL");
+    jmethodID method = sdl ? env->GetStaticMethodID(sdl, name, sig) : nullptr;
+    if (method)
+    {
+        if (arg) env->CallStaticVoidMethod(sdl, method, arg);
+        else env->CallStaticVoidMethod(sdl, method);
+    }
+    bool ok = method && !env->ExceptionCheck();
+    env->ExceptionClear();
+    if (sdl) env->DeleteLocalRef(sdl);
+    return ok;
+}
+
+extern "C" __attribute__((visibility("default"))) int hs_android_sdl_setup(void *javaVM, void *activity, char *error, size_t errorSize)
+{
+    JavaVM *vm = (JavaVM *)javaVM;
+    JNIEnv *env = nullptr;
+    if (!vm || vm->GetEnv((void **)&env, JNI_VERSION_1_4) != JNI_OK)
+    {
+        snprintf(error, errorSize, "SDL: no JNI environment on this thread.");
+        return 1;
+    }
+    JNI_OnLoad(vm, nullptr);
+    if (!CallSDLJava(env, "setupJNI", "()V", nullptr) || !CallSDLJava(env, "initialize", "()V", nullptr) ||
+        !CallSDLJava(env, "setContext", "(Landroid/app/Activity;)V", (jobject)activity))
+    {
+        snprintf(error, errorSize, "SDL: the app lacks SDL's Java classes (org.libsdl.app) or they don't match.");
+        return 1;
+    }
+    g_sdlReady = true;
+    return 0;
+}
+#endif
+
 extern "C" __attribute__((visibility("default"))) int hs_android_init(const hs_host_info *info, char *error, size_t errorSize)
 {
     if (!info || info->version != HS_HOST_VERSION || info->size < HS_HOST_INFO_SIZE_V1)
@@ -230,6 +288,14 @@ extern "C" __attribute__((visibility("default"))) int hs_android_init(const hs_h
                 g_host.prepatch_mode == HS_PREPATCH_VERIFY ? "verified" : "recorded", slotsUsed, slotCount);
     }
     g_running = true;
+
+    // SDL3, for the features that use it: ftl-linux's own on Linux, already started there;
+    // Hyperspace's elsewhere. The game's main() isn't SDL's, and signals belong to the app.
+    if (!SDL_WasInit(0))
+    {
+        SDL_SetMainReady();
+        SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
+    }
 
     G_->Initialize();
     HostLog(0, "Hyperspace: initialized");

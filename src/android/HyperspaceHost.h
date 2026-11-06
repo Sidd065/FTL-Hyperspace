@@ -64,6 +64,15 @@ void hs_android_right_button(int action, int x, int y);
 typedef int (*hs_android_wants_right_click_fn)(void);
 typedef void (*hs_android_right_button_fn)(int action, int x, int y);
 
+// Android only: SDL3, which Hyperspace's features use for audio and controllers, needs
+// its Java side. The app ships SDL's Java classes (org.libsdl.app, of the SDL version
+// Hyperspace is built with), forwards controller input to SDLControllerManager, and calls
+// this once before hs_android_init, from a thread Java started (only there does JNI find
+// the app's classes), with its JavaVM * and the activity (a jobject). Without it,
+// Hyperspace's SDL features stay off. Returns 0, or 1 with the reason in error.
+int hs_android_sdl_setup(void *java_vm, void *activity, char *error, size_t error_size);
+typedef int (*hs_android_sdl_setup_fn)(void *java_vm, void *activity, char *error, size_t error_size);
+
 #ifdef __cplusplus
 }
 #endif
