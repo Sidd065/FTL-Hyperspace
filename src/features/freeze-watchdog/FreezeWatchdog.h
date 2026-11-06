@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(HS_ANDROID)  // the desktop game on macOS, not the iPad game
 
 namespace FreezeWatchdog {
     // Start the watchdog process. Called from launchHyperspace().

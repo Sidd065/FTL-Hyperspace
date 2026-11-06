@@ -11,6 +11,8 @@
 #endif
 #ifndef HS_IPAD_SWITCH
 #include <dlfcn.h>
+#endif
+#ifdef __ANDROID__
 #include <elf.h>
 #include <link.h>
 #endif
@@ -41,7 +43,7 @@ static void HostLog(int level, const char *fmt, ...)
 #ifdef __ANDROID__
         __android_log_write(level >= 2 ? ANDROID_LOG_ERROR : level == 1 ? ANDROID_LOG_WARN : ANDROID_LOG_INFO, "Hyperspace", msg);
 #else
-        fprintf(stderr, "Hyperspace: %s\n", msg);  // ftl-linux
+        fprintf(stderr, "Hyperspace: %s\n", msg);  // ftl-linux, macOS
 #endif
 }
 
@@ -196,7 +198,13 @@ extern "C" __attribute__((visibility("default"))) int hs_android_init(const hs_h
     }
     AdjustForTranslator();
     Arm64Detour::SetGameRange((uintptr_t)info->mach_header, info->image_size);
-    if (g_host.alloc_code && g_host.write_code)
+    bool prepatched = info->size >= offsetof(hs_host_info, prepatch_mode) + sizeof(int) &&
+                      g_host.prepatch_mode != HS_PREPATCH_NONE;
+    if (prepatched)
+        Arm64Detour::SetImageMode(g_host.prepatch_code, g_host.prepatch_code_size, g_host.prepatch_slots,
+                                  g_host.prepatch_slot_count, g_host.prepatch_originals, g_host.prepatch_originals_size,
+                                  g_host.prepatch_mode == HS_PREPATCH_VERIFY);
+    else if (g_host.alloc_code && g_host.write_code)
         Arm64Detour::SetHostCode(g_host.alloc_code, g_host.write_code);
 #ifdef HS_IPAD_SWITCH
     else
@@ -215,6 +223,12 @@ extern "C" __attribute__((visibility("default"))) int hs_android_init(const hs_h
     }
     size_t poolSize = 0, poolUsed = Arm64Detour::PoolUsed(&poolSize);
     HostLog(0, "Hyperspace: hooks installed (%zuK of %zuK for trampolines)", poolUsed >> 10, poolSize >> 10);
+    if (prepatched)
+    {
+        size_t slotCount = 0, slotsUsed = Arm64Detour::SlotsUsed(&slotCount);
+        HostLog(0, "Hyperspace: %s the prepatched code (%zu of %zu pointers)",
+                g_host.prepatch_mode == HS_PREPATCH_VERIFY ? "verified" : "recorded", slotsUsed, slotCount);
+    }
     g_running = true;
 
     G_->Initialize();

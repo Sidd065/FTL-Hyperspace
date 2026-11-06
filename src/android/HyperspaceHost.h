@@ -36,7 +36,22 @@ typedef struct hs_host_info
 
     /* Optional: shows an error and returns once the player closed it */
     void (*show_error)(const char *title, const char *message);
+
+    /* Optional: a prepatched game, for iOS where code can't be changed at runtime
+       (see Arm64Detour.cpp). Segments the host added to the game: the trampolines go
+       in prepatch_code, the pointers they jump through in prepatch_slots, the hooked
+       functions' first instructions in prepatch_originals. Mode 1 records (writes the
+       code, on a Mac); mode 2 verifies (the code is in the game's file already). */
+    void *prepatch_code;
+    size_t prepatch_code_size;
+    void **prepatch_slots;
+    size_t prepatch_slot_count;
+    void *prepatch_originals;
+    size_t prepatch_originals_size;
+    int prepatch_mode;
 } hs_host_info;
+
+enum { HS_PREPATCH_NONE = 0, HS_PREPATCH_RECORD = 1, HS_PREPATCH_VERIFY = 2 };
 
 #define HS_HOST_INFO_SIZE_V1 offsetof(hs_host_info, hook_area)
 

@@ -1,4 +1,4 @@
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(HS_ANDROID)  // the desktop game on macOS, not the iPad game
 
 #include "FreezeWatchdog.h"
 #include <unistd.h>

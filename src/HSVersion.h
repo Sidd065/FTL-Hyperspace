@@ -20,6 +20,10 @@ Change the version numbers here
     #define BUILD_TGT " Switch"
 #elif defined(HS_IPAD_LINUX)
     #define BUILD_TGT " aarch64 Linux"
+#elif defined(HS_IPAD_MACOS)
+    #define BUILD_TGT " aarch64 macOS"
+#elif defined(HS_IPAD_IOS)
+    #define BUILD_TGT " aarch64 iOS"
 #elif defined(__ANDROID__)
     #define BUILD_TGT " aarch64 Android"
 #elif defined(__linux__)
@@ -28,6 +32,8 @@ Change the version numbers here
     #else
         #define BUILD_TGT " x64"
     #endif // __arch
+#elif defined(__APPLE__)
+    #define BUILD_TGT " amd64 macOS"
 #else
 #define BUILD_TGT ""
 #endif // __linux__

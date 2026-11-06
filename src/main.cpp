@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "Global.h"
 
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(HS_ANDROID)  // the desktop game on macOS, not the iPad game
 #include "features/freeze-watchdog/FreezeWatchdog.h"
 #endif
 

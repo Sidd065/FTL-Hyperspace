@@ -59,7 +59,7 @@ HOOK_METHOD(ControlsScreen, OnInit, () -> void)
     }
 
     // Ugly fix for the rightclick button hotkey, might look for a better approach in the future
-    #ifdef __APPLE__
+    #if defined(__APPLE__) && !defined(HS_ANDROID)
     this->buttons[0][24].rect.x += 44;
     this->buttons[0][24].rect.y += 13;
     /*

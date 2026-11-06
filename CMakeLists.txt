@@ -12,8 +12,10 @@ include(GeneratedSources)
 # FTL for iPad, run by ftl-android, ftl-linux or ftl.nro (Switch, static library without vcpkg)
 option(HS_IPAD_LINUX "Build for FTL for iPad run by ftl-linux on aarch64 Linux" OFF)
 option(HS_IPAD_SWITCH "Build for FTL for iPad run by ftl.nro on the Switch (static library)" OFF)
+option(HS_IPAD_MACOS "Build for FTL for iPad run as a Mac Catalyst app on Apple Silicon (iOS-FTL-for-macOS)" OFF)
+option(HS_IPAD_IOS "Build for FTL for iPad on iOS itself, a device or the simulator" OFF)
 set(HS_DEPS "" CACHE PATH "Switch: include/ and lib/ with Boost headers, Lua 5.3, minizip and zlib")
-if(ANDROID OR HS_IPAD_LINUX OR HS_IPAD_SWITCH)
+if(ANDROID OR HS_IPAD_LINUX OR HS_IPAD_SWITCH OR HS_IPAD_MACOS OR HS_IPAD_IOS)
     set(HS_IPAD_PORT ON)
 else()
     set(HS_IPAD_PORT OFF)
@@ -271,15 +273,26 @@ if(HS_IPAD_PORT)
         target_link_libraries(Hyperspace PRIVATE log)
     elseif(HS_IPAD_SWITCH)
         target_compile_definitions(Hyperspace PRIVATE HS_IPAD_SWITCH=1)
+    elseif(HS_IPAD_MACOS)
+        target_compile_definitions(Hyperspace PRIVATE HS_IPAD_MACOS=1)
+    elseif(HS_IPAD_IOS)
+        target_compile_definitions(Hyperspace PRIVATE HS_IPAD_IOS=1)
     else()
         target_compile_definitions(Hyperspace PRIVATE HS_IPAD_LINUX=1)
     endif()
-    target_link_options(Hyperspace PRIVATE
-        # Use the port's libunwind
-        -unwindlib=none "${FTL_LIBCXX}/lib/libunwind.a"
-        # Keep static library symbols private
-        -Wl,--exclude-libs,ALL
-    )
+    if(HS_IPAD_MACOS OR HS_IPAD_IOS)
+        # The game is a real Mach-O image under dyld, so the system's libc++ and unwinder
+        # serve it as they are. Export only the host interface.
+        set_target_properties(Hyperspace PROPERTIES PREFIX "" OUTPUT_NAME "Hyperspace.1.6.21.arm64")
+        target_link_options(Hyperspace PRIVATE "-Wl,-exported_symbol,_hs_android_*")
+    else()
+        target_link_options(Hyperspace PRIVATE
+            # Use the port's libunwind
+            -unwindlib=none "${FTL_LIBCXX}/lib/libunwind.a"
+            # Keep static library symbols private
+            -Wl,--exclude-libs,ALL
+        )
+    endif()
 elseif(UNIX)
     if (APPLE)
         # SDL3 loads OpenGL dynamically on macOS. 
