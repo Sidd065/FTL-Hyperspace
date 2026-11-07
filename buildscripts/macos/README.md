@@ -18,9 +18,11 @@ applies, except what is about bionic and the APK.
   which has the ABI it was built with, and the system's unwinder reads its unwind info.
   The `arm64-darwin-ftl` triplet and toolchain (`.devcontainer/`) build a plain macOS
   arm64 dylib, which loads into the Catalyst process; vcpkg leaves out OpenGL and
-  discord-rpc for it, as for the other iPad ports. SDL3 is vcpkg's macOS build, linked
-  into the dylib for Hyperspace's features (audio, controllers); it isn't tested in the
-  Catalyst process yet.
+  discord-rpc for it, as for the other iPad ports. SDL3 is vcpkg's macOS build (3.4.4),
+  linked into the dylib for Hyperspace's features (audio, controllers). It runs in the
+  Catalyst process: with the SDL test overlay (`HS_TEST_SDL`) the audio subsystem comes
+  up on CoreAudio with the Mac's output device and the gamepad subsystem starts; a
+  controller, its rumble and motion sensors aren't tested yet (no controller at hand).
 - Writing code (`src/zhl/Arm64Detour.cpp`): the game's code is mapped from its signed
   file and `mprotect()` refuses to make it writable, so on macOS protections change with
   `mach_vm_protect()` and `VM_PROT_COPY` (a private copy of the page). A page is never
