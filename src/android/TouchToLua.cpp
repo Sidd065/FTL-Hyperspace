@@ -56,8 +56,20 @@ static bool LuaWantsClicks()
            script->has_internal_event_callbacks(InternalEvents::ON_MOUSE_L_BUTTON_UP);
 }
 
+static Point LuaPoint(Point pos)
+{
+    for (const IpadUI::MovedRegion &region : {IpadUI::ftlButtonLua, IpadUI::shipStatusLua})
+    {
+        Globals::Rect moved(region.pc.x + region.offset.x, region.pc.y + region.offset.y, region.pc.w, region.pc.h);
+        if (IpadUI::Contains(moved, pos.x, pos.y)) return Point(pos.x - region.offset.x, pos.y - region.offset.y);
+        if (IpadUI::Contains(region.pc, pos.x, pos.y)) return IpadUI::offscreen;
+    }
+    return pos;
+}
+
 static bool LuaButton(InternalEvents::Identifiers event, Point pos)
 {
+    pos = LuaPoint(pos);
     auto context = Global::GetInstance()->getLuaContext();
     lua_pushinteger(context->GetLua(), pos.x);
     lua_pushinteger(context->GetLua(), pos.y);
@@ -68,6 +80,7 @@ static bool LuaButton(InternalEvents::Identifiers event, Point pos)
 
 static void LuaCursorTo(Point pos, bool holdingLeft, bool holdingRight = false)
 {
+    pos = LuaPoint(pos);
     MouseControl *mouse = G_->GetMouseControl();
     Point last = mouse->position;
     mouse->lastPosition = last;
