@@ -1,6 +1,9 @@
 #include "CustomBackgroundObject.h"
 #include "CustomEvents.h"
 #include <boost/lexical_cast.hpp>
+#ifdef HS_ANDROID
+#include "android/IpadUI.h"
+#endif
 
 CustomBackgroundObjectManager* CustomBackgroundObjectManager::instance = new CustomBackgroundObjectManager();
 
@@ -762,10 +765,19 @@ void CustomBackgroundObjectManager::OnRender(SpaceManager *space, int layer)
     tint.b = tint.g;
     tint.a = 1.f;
 
+#ifdef HS_ANDROID
+    float scale = std::max(IpadUI::ScreenWidth() / 1280.f, 768.f / 720.f);
+    CSurface::GL_PushMatrix();
+    CSurface::GL_Translate(512.f - 640.f * scale, 384.f - 360.f * scale);
+    CSurface::GL_Scale(scale, scale, 1.f);
+#endif
     for (CustomBackgroundObject &backgroundObject : backgroundObjects[currentLocationIndex])
     {
         backgroundObject.OnRender(layer, tint);
     }
+#ifdef HS_ANDROID
+    CSurface::GL_PopMatrix();
+#endif
 }
 
 HOOK_METHOD(SpaceManager, OnRenderBackground, () -> void)
