@@ -2993,6 +2993,27 @@ static void NoteHangarAchievement(CAchievement *ach, Point pos, int size, int se
     if (ach) g_hangarAchievementSpots.push_back({Globals::Rect(pos.x, pos.y, size, size), ach, selection});
 }
 
+static bool UsePcHangarBackground()
+{
+    return IpadUI::PackageHas("img/customizeUI/custom_background.png") && !IpadUI::PackageHas("img/ipad/customizeUI/custom_background.png");
+}
+
+HOOK_METHOD(ResourceControl, GetImageId, (const std::string& name) -> GL_Texture*)
+{
+    LOG_HOOK("HOOK_METHOD -> ResourceControl::GetImageId -> Begin (CustomShipSelect.cpp)\n")
+    if (name == "ipad/customizeUI/custom_background.png" && UsePcHangarBackground())
+    {
+        GL_Texture *tex = super("customizeUI/custom_background.png");
+        if (tex)
+        {
+            tex->width_ = 1376;
+            tex->height_ = 768;
+        }
+        return tex;
+    }
+    return super(name);
+}
+
 static void ShowReactorInfo(ShipBuilder *builder)
 {
     auto def = CustomShipSelect::GetInstance()->GetDefinition(builder->currentShip->myBlueprint.blueprintName);
@@ -3201,6 +3222,10 @@ HOOK_METHOD_PRIORITY(ShipBuilder, OnRender, 1000, () -> void)
     for (auto i : CustomShipSelect::GetInstance()->customAnims)
     {
         CSurface::GL_PushMatrix();
+#ifdef HS_ANDROID
+        CSurface::GL_Translate(-176.f, 0.f);
+        CSurface::GL_Scale(1376.f / 1280.f, 768.f / 720.f, 1.f);
+#endif
         CSurface::GL_Translate(i.first.x, i.first.y);
 
         i.second->OnRender(1.f, COLOR_WHITE, false);
