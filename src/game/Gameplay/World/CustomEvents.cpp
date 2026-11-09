@@ -16,6 +16,9 @@
 #include <algorithm>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
+#ifdef HS_ANDROID
+#include "android/IpadUI.h"
+#endif
 
 std::bitset<8> advancedCheckEquipment{0x00};
 
@@ -5790,6 +5793,36 @@ HOOK_METHOD(ResourceControl, GetImageId, (const std::string& name) -> GL_Texture
     return super(name);
 }
 
+#ifdef HS_ANDROID
+static void RenderCreditsBackground(GL_Texture *tex, GL_Color color, float opacity)
+{
+    if (!tex || tex->width_ <= 0 || tex->height_ <= 0) return;
+    color.a = opacity;
+    if (tex->width_ == tex->height_)
+    {
+        CSurface::GL_BlitPixelImage(tex, 0.f, 0.f, tex->width_, tex->height_, 0.f, color, false, true);
+        return;
+    }
+    float scale = std::max(IpadUI::ScreenWidth() / tex->width_, 768.f / tex->height_);
+    float w = tex->width_ * scale;
+    float h = tex->height_ * scale;
+    CSurface::GL_BlitImage(tex, 512.f - w / 2, 384.f - h / 2, w, h, 0.f, color, false);
+}
+
+static void RenderCreditsSkipMessage(float timer)
+{
+    if (timer <= 0.f) return;
+    std::string text = G_->GetTextLibrary()->GetText("touch_skip");
+    Pointf size = freetype::easy_measurePrintLines(12, 0, 0, 9999, text);
+    float alpha = std::min(1.f, timer / 0.75f);
+    float right = IpadUI::ScreenRight();
+    CSurface::GL_DrawRect(right - (size.x + 20), 0, size.x + 20, size.y + 20, GL_Color(0.f, 0.f, 0.f, alpha * 0.75f));
+    CSurface::GL_SetColor(GL_Color(1.f, 1.f, 0.f, alpha));
+    freetype::easy_print(12, right - (size.x + 10), 10, text);
+    CSurface::GL_SetColor(COLOR_WHITE);
+}
+#endif
+
 // I'm sorry, IDK C++ better to know what to write instead of globals :anguish:
 float fadeIn;
 float scrollEnd;
@@ -5891,6 +5924,9 @@ HOOK_METHOD(CreditScreen, Done, () -> bool)
     if (CustomOptionsManager::GetInstance()->altCreditSystem.currentValue)
     {
         ret = (scroll <= -scrollEnd) ? true : false;
+#ifdef HS_ANDROID
+        if (touchesDown > 0 && time_now() >= touchDownTime + 2.0) ret = true;
+#endif
     }
     else
     {
@@ -5957,10 +5993,19 @@ HOOK_METHOD(CreditScreen, OnRender, () -> void)
         else {
             scroll -= trueScrollSpeed;
         }
+#ifdef HS_ANDROID
+        skipMessageTimer = touchesDown > 0 ? 1.f : std::max(0.f, skipMessageTimer - gameSpeed * 0.0625f);
+#endif
 
         /* ----- Rendering -----*/
         // Background rendering
+#ifdef HS_ANDROID
+        RenderCreditsBackground(bg, colorGray, 1.f);
+        CSurface::GL_PushMatrix();
+        CSurface::GL_Translate(-128.f, 24.f);
+#else
         G_->GetResources()->RenderImage(bg, 0, 0, 0, colorGray, 1.f, false);
+#endif
         CSurface::GL_SetColor(colorWhite);
         // Hardcoded Texts
         if (!shipName.empty()) {
@@ -6023,11 +6068,21 @@ HOOK_METHOD(CreditScreen, OnRender, () -> void)
             }
             currentHeight += creditFinishText.spacing;
         }
+#ifdef HS_ANDROID
+        CSurface::GL_PopMatrix();
+#endif
         // Text Fading
         if (fadeIn > 0) {
+#ifdef HS_ANDROID
+            RenderCreditsBackground(bg, colorGray, fadeIn);
+#else
             G_->GetResources()->RenderImage(bg, 0, 0, 0, colorGray, fadeIn, false);
+#endif
             CSurface::GL_SetColor(colorWhite);
         }
+#ifdef HS_ANDROID
+        RenderCreditsSkipMessage(skipMessageTimer);
+#endif
 
         /* ----- Auto Stop -----*/
         Done();

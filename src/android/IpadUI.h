@@ -57,4 +57,9 @@ namespace IpadUI
         CApp *app = G_->GetCApp();
         return app->screen_y > 0 ? 512 + app->screen_x * 384 / app->screen_y : 1024;
     }
+
+    inline float ScreenWidth()
+    {
+        return 2 * ScreenRight() - 1024;
+    }
 }
