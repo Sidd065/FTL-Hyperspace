@@ -149,9 +149,7 @@ HOOK_METHOD(CombatControl, RenderTarget, () -> void)
     {
         const Globals::Rect &box = hostileBoxFrame->rect;
         int iconWidth = 34;
-        int x = box.x + box.w + 3;
-        if (x + iconWidth > IpadUI::ScreenRight()) x = box.x + box.w - iconWidth - 8;
-        g_iconsCorner = Point(x, box.y + box.h - 3);
+        g_iconsCorner = Point(box.x + box.w - iconWidth - 4, box.y + box.h - 15);
     }
 #endif
 
