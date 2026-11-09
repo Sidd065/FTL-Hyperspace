@@ -157,6 +157,9 @@ HOOK_METHOD(Shields, CollisionReal, (float x, float y, Damage damage, bool force
 
 int numSuperShieldBars = 0;
 std::vector<GL_Primitive*> superShieldBars = std::vector<GL_Primitive*>();
+#ifdef HS_ANDROID
+static Point superShieldBarsPos;
+#endif
 
 HOOK_METHOD(ShipStatus, RenderShields, (bool renderText) -> void)
 {
@@ -179,7 +182,11 @@ HOOK_METHOD(ShipStatus, RenderShields, (bool renderText) -> void)
             ship->shieldSystem->shields.power.super.first = superShield.first;
             ship->shieldSystem->shields.charger = charger;
 
+#ifdef HS_ANDROID
+            if (superShield.second != numSuperShieldBars || energyShieldPos != superShieldBarsPos)
+#else
             if (superShield.second != numSuperShieldBars)
+#endif
             {
                 numSuperShieldBars = superShield.second;
 
@@ -191,8 +198,14 @@ HOOK_METHOD(ShipStatus, RenderShields, (bool renderText) -> void)
                 superShieldBars.clear();
                 superShieldBars.reserve(superShield.second);
 
+#ifdef HS_ANDROID
+                superShieldBarsPos = energyShieldPos;
+                float x = energyShieldPos.x + 3;
+                int y = energyShieldPos.y + 3;
+#else
                 float x = 33.5;
                 int y = 79;
+#endif
                 float width = 92;
                 int height = 6;
 
