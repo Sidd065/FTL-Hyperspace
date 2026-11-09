@@ -297,6 +297,17 @@ HOOK_METHOD(ShipStatus, OnLoop, () -> void)
         }
 
 #ifdef HS_ANDROID
+        const Globals::Rect evadeOxygenBox(287, 27, 86, 27);
+        for (auto custom = customButtons.begin(); custom != it; ++custom)
+        {
+            Point pos = custom->def->customLocation;
+            if (pos.x < evadeOxygenBox.x + evadeOxygenBox.w && evadeOxygenBox.x < pos.x + custom->dimension.x &&
+                pos.y < evadeOxygenBox.y + evadeOxygenBox.h && evadeOxygenBox.y < pos.y + custom->dimension.y)
+            {
+                pos.y = evadeOxygenBox.y + evadeOxygenBox.h + 3;
+            }
+            custom->button->SetLocation(pos);
+        }
         int x = 80;
         for (; it != customButtons.end(); ++it)
         {
