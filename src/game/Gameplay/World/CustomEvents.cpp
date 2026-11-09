@@ -3193,10 +3193,17 @@ HOOK_METHOD(CombatControl, AddEnemyShip, (CompleteShip *ship) -> void)
 
     if (custom->GetBossShipDefinition(ship->shipManager->myBlueprint.blueprintName))
     {
+#ifdef HS_ANDROID
+        boxPosition.x = -30;
+        boxPosition.y = 72;
+
+        targetPosition.x = boxPosition.x + 270 - ShipGraph::GetShipInfo(currentTarget->shipManager->iShipId)->shipBox.w / 2;
+#else
         boxPosition.x = 5;
         boxPosition.y = 7;
 
         targetPosition.x = boxPosition.x + 261 - ShipGraph::GetShipInfo(currentTarget->shipManager->iShipId)->shipBox.w / 2;
+#endif
         targetPosition.y = boxPosition.y + custom->GetBossShipDefinition(ship->shipManager->myBlueprint.blueprintName)->yOffset;
 
         boss_visual = true;
