@@ -24,7 +24,7 @@ namespace IpadUI
     inline int PriceButtonY(InfoBox &info, int fallback)
     {
         WindowFrame *frame = info.primaryBox;
-        if (!frame) return fallback;
+        if (!frame || info.IsEmpty()) return fallback;
         int y = info.location.y + info.primaryBoxOffset + frame->rect.y + frame->rect.h - 6;
         if (info.pCrewBlueprint && info.bDetailed) y -= 40;
         return y;

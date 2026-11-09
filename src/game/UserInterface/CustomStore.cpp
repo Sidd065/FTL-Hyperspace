@@ -1445,18 +1445,32 @@ void StoreComplete::OnTouch(TouchAction action, int id, int x, int y, int initia
     {
         box->OnTouch(action, id, x, y, initialX, initialY);
     }
-    for (StoreBox *box : boxes)
+
+    auto SelectTouchedBox = [&](StoreBox *box, bool mysteryItem)
     {
         if ((box->button.bHover || box->button.bSelected) && box->count > 0)
         {
-            box->SetInfoBox(orig->infoBox, orig->forceSystemInfoWidth);
+            if (!mysteryItem) box->SetInfoBox(orig->infoBox, orig->forceSystemInfoWidth);
             orig->buyButtonPos.x = orig->infoBoxLoc.x - (buy.GetSize().x + 95) / 2 + 249;
-            orig->buyButtonPos.y = IpadUI::PriceButtonY(orig->infoBox, orig->infoBoxLoc.y + 2);
+            orig->buyButtonPos.y = IpadUI::PriceButtonY(orig->infoBox, orig->infoBoxLoc.y + orig->infoBox.primaryBoxOffset);
             buy.SetLocation(orig->buyButtonPos);
             orig->selectedBox = box;
             buy.SetActive(box->CanHold());
         }
+    };
+    if (!pages.empty())
+    {
+        for (auto &section : pages[currentPage].sections)
+        {
+            if (section.storeBoxes.empty()) continue;
+            for (CustomStoreBox *box : section.storeBoxes[section.currentSection])
+            {
+                SelectTouchedBox(box->orig, box->mysteryItem);
+            }
+        }
     }
+    for (ItemStoreBox *box : resourceBoxes) SelectTouchedBox(box, false);
+    for (RepairStoreBox *box : repairBoxes) SelectTouchedBox(box, false);
 }
 
 void StoreComplete::RenderBuyButton()
