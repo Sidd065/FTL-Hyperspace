@@ -1,5 +1,6 @@
 #pragma once
 #include "Global.h"
+#include <set>
 
 namespace IpadUI
 {
@@ -61,5 +62,20 @@ namespace IpadUI
     inline float ScreenWidth()
     {
         return 2 * ScreenRight() - 1024;
+    }
+
+    inline bool PackageHas(const std::string &name)
+    {
+        static std::set<std::string> files;
+        PackageModuleInfo *package = G_->GetResources()->package;
+        if (files.empty() && package)
+        {
+            package->list_files_start(package);
+            for (const char *file = package->list_files_next(package); file; file = package->list_files_next(package))
+            {
+                files.insert(file);
+            }
+        }
+        return files.count(name) > 0;
     }
 }
