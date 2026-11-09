@@ -1270,6 +1270,10 @@ void CustomShipSelect::OnRender(bool renderSelect)
                     std::string lockImgName = "customizeUI/miniship_" + bp->imgFile + "_base.png";
                     bool useLockImg = CustomOptionsManager::GetInstance()->altLockedMiniships.currentValue && button->bShipLocked && G_->GetResources()->ImageExists(lockImgName);
                     button->iShipImage = G_->GetResources()->GetImageId(useLockImg ? lockImgName : "customizeUI/miniship_" + bp->imgFile + ".png");
+#ifdef HS_ANDROID
+                    button->bSelected = x->GetId() == shipSelect->selectedShip;
+                    button->SetActiveImage(G_->GetResources()->GetImageId(button->bSelected ? "customizeUI/ship_list_button_select2.png" : "customizeUI/ship_list_button_on.png"));
+#endif
                     button->OnRender();
                 }
             }
