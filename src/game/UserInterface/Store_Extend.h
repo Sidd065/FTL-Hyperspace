@@ -191,6 +191,7 @@ public:
     void OnTouch(TouchAction action, int id, int x, int y, int initialX, int initialY);
     void RenderBuyButton();
     std::vector<StoreBox*> BoxesOnShow(bool itemsOnly);
+    bool IsMysteryItem(StoreBox *box);
 #endif
 
     StoreComplete(Store* original)

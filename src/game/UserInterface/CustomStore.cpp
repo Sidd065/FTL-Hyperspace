@@ -1378,6 +1378,20 @@ std::vector<StoreBox*> StoreComplete::BoxesOnShow(bool itemsOnly)
     return boxes;
 }
 
+bool StoreComplete::IsMysteryItem(StoreBox *box)
+{
+    if (pages.empty()) return false;
+    for (auto &section : pages[currentPage].sections)
+    {
+        if (section.storeBoxes.empty()) continue;
+        for (CustomStoreBox *custom : section.storeBoxes[section.currentSection])
+        {
+            if (custom->orig == box) return custom->mysteryItem;
+        }
+    }
+    return false;
+}
+
 void StoreComplete::OnTouch(TouchAction action, int id, int x, int y, int initialX, int initialY)
 {
     orig->FocusWindow::OnTouch(action, id, x, y, initialX, initialY);
@@ -1449,9 +1463,10 @@ void StoreComplete::OnTouch(TouchAction action, int id, int x, int y, int initia
     {
         if ((box->button.bHover || box->button.bSelected) && box->count > 0)
         {
-            box->SetInfoBox(orig->infoBox, orig->forceSystemInfoWidth);
+            bool mystery = IsMysteryItem(box);
+            if (!mystery) box->SetInfoBox(orig->infoBox, orig->forceSystemInfoWidth);
             orig->buyButtonPos.x = orig->infoBoxLoc.x - (buy.GetSize().x + 95) / 2 + 249;
-            orig->buyButtonPos.y = IpadUI::PriceButtonY(orig->infoBox, orig->infoBoxLoc.y + 2);
+            orig->buyButtonPos.y = mystery ? orig->infoBoxLoc.y + 2 : IpadUI::PriceButtonY(orig->infoBox, orig->infoBoxLoc.y + 2);
             buy.SetLocation(orig->buyButtonPos);
             orig->selectedBox = box;
             buy.SetActive(box->CanHold());
