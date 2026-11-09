@@ -2407,10 +2407,10 @@ HOOK_METHOD(ShipSelect, OnTouch, (TouchAction action, int id, int x, int y, int 
     customSel->OnTouch(action, id, x, y, initialX, initialY);
     super(action, id, x, y, initialX, initialY);
 
-    if (bConfirmed && selectedShip >= 100)
+    ShipBuilder &builder = G_->GetCApp()->menu.shipBuilder;
+    if (bConfirmed && selectedShip >= 100 && this == &builder.shipSelect)
     {
         bConfirmed = false;
-        ShipBuilder &builder = G_->GetCApp()->menu.shipBuilder;
         if (builder.currentShip)
         {
             builder.currentShip->destructor2();
