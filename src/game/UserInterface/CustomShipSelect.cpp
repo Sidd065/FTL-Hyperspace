@@ -3598,7 +3598,12 @@ HOOK_METHOD_PRIORITY(ShipBuilder, OnRender, 1000, () -> void)
         {
             if (!SeedInputBox::seedsAllowUnlocks)
             {
+#ifdef HS_ANDROID
+                G_->GetResources()->RenderImage(unlocksDisabledTexture, startButton.hitbox.x + startButton.hitbox.w - unlocksDisabledTexture->width_,
+                                                easyButton.hitbox.y - 12 - unlocksDisabledTexture->height_, 0, COLOR_WHITE, 1.f, false);
+#else
                 CSurface::GL_RenderPrimitive(unlocksDisabledPrimitive);
+#endif
             }
 
             SeedInputBox::seedInput->OnRender(0, Point((int)SeedInputBox::drawLocation.x+2+(SeedInputBox::width/2), (int)SeedInputBox::drawLocation.y+5));
@@ -3606,7 +3611,7 @@ HOOK_METHOD_PRIORITY(ShipBuilder, OnRender, 1000, () -> void)
         else
         {
 #ifdef HS_ANDROID
-            freetype::easy_printCenter(14, SeedInputBox::drawLocation.x+2+(SeedInputBox::width/2), SeedInputBox::drawLocation.y-6, SeedInputBox::prompt);
+            freetype::easy_printCenter(14, SeedInputBox::drawLocation.x+2+(SeedInputBox::width/2), SeedInputBox::drawLocation.y-10, SeedInputBox::prompt);
 #else
             SeedInputBox::seedInput->OnRender(14, Point((int)SeedInputBox::drawLocation.x+2+(SeedInputBox::width/2), (int)SeedInputBox::drawLocation.y-6));
 #endif

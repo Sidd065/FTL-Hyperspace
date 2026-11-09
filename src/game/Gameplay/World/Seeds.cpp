@@ -92,7 +92,11 @@ HOOK_METHOD(ShipBuilder, Open, () -> void)
     SeedInputBox::seedInput->SetText("");
     SeedInputBox::seedInput->prompt = std::string(SeedInputBox::prompt);
 
-#ifndef HS_ANDROID
+#ifdef HS_ANDROID
+    startButton.position.y = easyButton.hitbox.y;
+    startButton.hitbox.y = easyButton.hitbox.y;
+    SeedInputBox::drawLocation = Pointf(startButton.hitbox.x + (startButton.hitbox.w - SeedInputBox::width) / 2, startButton.hitbox.y + startButton.hitbox.h + 8);
+#else
     startButton.position.y = 15;
     startButton.hitbox.y = 15;
 #endif
