@@ -2,6 +2,9 @@
 #include "LuaLibScript.h"
 #include "RenderEvents.h"
 #include "swigluarun.h"
+#ifdef HS_ANDROID
+#include "android/IpadUI.h"
+#endif
 
 /** All the hook code for the various RenderEvents belongs here **/
 
@@ -158,9 +161,20 @@ HOOK_METHOD(Ship, OnRenderJump, (float progress) -> void)
 HOOK_METHOD(FTLButton, OnRender, () -> void)
 {
     LOG_HOOK("HOOK_METHOD -> FTLButton::OnRender -> Begin (RenderEvents.cpp)\n")
+#ifdef HS_ANDROID
+    Point offset = IpadUI::ftlButtonLua.offset;
+    CSurface::GL_Translate(offset.x, offset.y);
+    int idx = Global::GetInstance()->getLuaContext()->getLibScript()->call_on_render_event_pre_callbacks(RenderEvents::FTL_BUTTON, 0);
+    CSurface::GL_Translate(-offset.x, -offset.y);
+    if (idx >= 0) super();
+    CSurface::GL_Translate(offset.x, offset.y);
+    Global::GetInstance()->getLuaContext()->getLibScript()->call_on_render_event_post_callbacks(RenderEvents::FTL_BUTTON, std::abs(idx), 0);
+    CSurface::GL_Translate(-offset.x, -offset.y);
+#else
     int idx = Global::GetInstance()->getLuaContext()->getLibScript()->call_on_render_event_pre_callbacks(RenderEvents::FTL_BUTTON, 0);
     if (idx >= 0) super();
     Global::GetInstance()->getLuaContext()->getLibScript()->call_on_render_event_post_callbacks(RenderEvents::FTL_BUTTON, std::abs(idx), 0);
+#endif
 }
 
 HOOK_METHOD(MouseControl, OnRender, () -> void)
@@ -193,7 +207,14 @@ HOOK_METHOD_PRIORITY(SystemBox, OnRender, 100, (bool ignoreStatus) -> void)
 HOOK_METHOD(ShipStatus, OnRender, () -> void)
 {
     LOG_HOOK("HOOK_METHOD -> ShipStatus::OnRender -> Begin (RenderEvents.cpp)\n")
+#ifdef HS_ANDROID
+    Point offset = IpadUI::shipStatusLua.offset;
+    CSurface::GL_Translate(offset.x, offset.y);
     int idx = Global::GetInstance()->getLuaContext()->getLibScript()->call_on_render_event_pre_callbacks(RenderEvents::SHIP_STATUS, 0);
+    CSurface::GL_Translate(-offset.x, -offset.y);
+#else
+    int idx = Global::GetInstance()->getLuaContext()->getLibScript()->call_on_render_event_pre_callbacks(RenderEvents::SHIP_STATUS, 0);
+#endif
     if (idx >= 0) super();
     Global::GetInstance()->getLuaContext()->getLibScript()->call_on_render_event_post_callbacks(RenderEvents::SHIP_STATUS, std::abs(idx), 0);
 }

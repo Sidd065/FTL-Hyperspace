@@ -298,13 +298,22 @@ HOOK_METHOD(ShipStatus, OnLoop, () -> void)
 
 #ifdef HS_ANDROID
         const Globals::Rect evadeOxygenBox(287, 27, 86, 27);
+        const Globals::Rect enemyWindow(462, 72, 542, 536);
+        const Globals::Rect &extras = IpadUI::ftlButtonLua.pc;
+        int rowRight = extras.x + IpadUI::ftlButtonLua.offset.x;
+        int rowBottom = extras.y + IpadUI::ftlButtonLua.offset.y + extras.h;
         for (auto custom = customButtons.begin(); custom != it; ++custom)
         {
             Point pos = custom->def->customLocation;
-            if (pos.x < evadeOxygenBox.x + evadeOxygenBox.w && evadeOxygenBox.x < pos.x + custom->dimension.x &&
-                pos.y < evadeOxygenBox.y + evadeOxygenBox.h && evadeOxygenBox.y < pos.y + custom->dimension.y)
+            Globals::Rect rect(pos.x, pos.y, custom->dimension.x, custom->dimension.y);
+            if (IpadUI::Overlaps(rect, evadeOxygenBox))
             {
                 pos.y = evadeOxygenBox.y + evadeOxygenBox.h + 3;
+            }
+            else if (IpadUI::Overlaps(rect, enemyWindow) || rect.x + rect.w > 1024 || rect.y + rect.h > 768)
+            {
+                rowRight -= rect.w + 3;
+                pos = Point(rowRight, rowBottom - rect.h);
             }
             custom->button->SetLocation(pos);
         }

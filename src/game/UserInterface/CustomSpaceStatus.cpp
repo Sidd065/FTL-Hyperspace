@@ -3,13 +3,30 @@
 #include "LuaLibScript.h"
 #include "RenderEvents.h"
 #include "swigluarun.h"
+#ifdef HS_ANDROID
+#include "android/IpadUI.h"
+#endif
 
 //Neutral ASB text
 static GL_Primitive* warningPdsAll = nullptr;
 static std::vector<int> g_hazards;
 #ifdef HS_ANDROID
 static int g_touchedHazard = 0;
+static Point g_luaOffset;
 #endif
+
+static void RenderLuaAfter(SpaceStatus *status, int idx)
+{
+#ifdef HS_ANDROID
+    g_luaOffset = IpadUI::SpaceStatusLuaOffset(*status);
+    CSurface::GL_Translate(g_luaOffset.x, g_luaOffset.y);
+#endif
+    G_->getLuaContext()->getLibScript()->call_on_render_event_post_callbacks(RenderEvents::SPACE_STATUS, std::abs(idx), 0);
+#ifdef HS_ANDROID
+    CSurface::GL_Translate(-g_luaOffset.x, -g_luaOffset.y);
+    g_luaOffset = Point(0, 0);
+#endif
+}
 
 HOOK_METHOD(SpaceStatus, OnInit, (SpaceManager *space, Point pos) -> void)
 {
@@ -96,7 +113,7 @@ HOOK_METHOD(SpaceStatus, OnRender, () -> void)
         incomingFire->OnRender();
         if (g_hazards.empty())
         {
-            G_->getLuaContext()->getLibScript()->call_on_render_event_post_callbacks(RenderEvents::SPACE_STATUS, std::abs(idx), 0);
+            RenderLuaAfter(this, idx);
             return;
         }
 
@@ -127,13 +144,13 @@ HOOK_METHOD(SpaceStatus, OnRender, () -> void)
         }
         if (((space->sunLevel == false) && (space->pulsarLevel == false)) && (space->bPDS == false))
         {
-            G_->getLuaContext()->getLibScript()->call_on_render_event_post_callbacks(RenderEvents::SPACE_STATUS, std::abs(idx), 0);
+            RenderLuaAfter(this, idx);
             return;
         }
         warningMessage->OnRender();
     }
 
-    G_->getLuaContext()->getLibScript()->call_on_render_event_post_callbacks(RenderEvents::SPACE_STATUS, std::abs(idx), 0);
+    RenderLuaAfter(this, idx);
 }
 
 HOOK_METHOD_PRIORITY(SpaceStatus, RenderWarningText, 9999, (int effect, int textOffset) -> void)
@@ -178,6 +195,10 @@ HOOK_METHOD_PRIORITY(SpaceStatus, RenderWarningText, 9999, (int effect, int text
     }
 
     Point textPos = Point(textOffset + position.x, position.y + 51);
+#ifdef HS_ANDROID
+    textPos.x -= g_luaOffset.x;
+    textPos.y -= g_luaOffset.y;
+#endif
     Pointf textSize = freetype::easy_measurePrintLines(52, 0.0, 0.0, 999, text);
     CSurface::GL_BlitImage(tex, textPos.x - (int)textSize.x / 2, textPos.y - 1, (int)textSize.x, (int)textSize.y, 0.0, COLOR_WHITE, false);
     CSurface::GL_SetColor(color);
