@@ -6524,7 +6524,9 @@ HOOK_METHOD(CrewControl, OnLoop, () -> void)
     ShipManager *ship = G_->GetShipManager(crew->currentShipId);
     if (!ship || crew->iRoomId < 0 || crew->iRoomId >= (int)ship->ship.vRoomList.size()) return;
     const Globals::Rect &room = ship->ship.vRoomList[crew->iRoomId]->rect;
-    Point center = crystalButton.position + crystalButtonCenter;
+    Pointf roomCenter = ship->ship.GetRoomCenter(crew->iRoomId);
+    Point shipPosition = ship == shipManager ? combatControl->playerShipPosition : combatControl->GetEnemyPosition();
+    Point center(shipPosition.x + roomCenter.x, shipPosition.y + roomCenter.y);
     Point size = crystalButtonCenter + crystalButtonCenter;
     int left = center.x + room.w / 2 + 4;
     if (left + size.x > IpadUI::ScreenRight()) left = center.x - room.w / 2 - 4 - size.x;
