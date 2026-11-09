@@ -60,8 +60,10 @@ typedef int (*hs_android_init_fn)(const hs_host_info *info, char *error, size_t 
 
 enum { HS_RIGHT_BUTTON_DOWN = 0, HS_RIGHT_BUTTON_MOVE = 1, HS_RIGHT_BUTTON_UP = 2 };
 int hs_android_wants_right_click(void);
+int hs_android_wants_right_click_at(int x, int y);
 void hs_android_right_button(int action, int x, int y);
 typedef int (*hs_android_wants_right_click_fn)(void);
+typedef int (*hs_android_wants_right_click_at_fn)(int x, int y);
 typedef void (*hs_android_right_button_fn)(int action, int x, int y);
 
 // Android only: SDL3, which Hyperspace's features use for audio and controllers, needs
