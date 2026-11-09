@@ -1,7 +1,9 @@
 #include "Global.h"
 #include "LuaLibScript.h"
 #include "InternalEvents.h"
+#include "CustomCommandGui.h"
 #include "android/HyperspaceHost.h"
+#include "android/IpadUI.h"
 #include <atomic>
 #include <deque>
 #include <mutex>
@@ -31,6 +33,14 @@ struct RightButtonEvent
 static std::mutex g_rightLock;
 static std::vector<RightButtonEvent> g_rightQueue;
 static std::atomic<bool> g_luaWantsRight{false};
+
+struct RightClickTargets
+{
+    std::vector<Globals::Rect> rects;
+    int xBar = 0, yBar = 0, modifierX = 0, modifierY = 0;
+    float mouseModifierX = 1.f, mouseModifierY = 1.f;
+};
+static RightClickTargets g_rightTargets;
 
 static bool LuaWantsRightClicks()
 {
@@ -75,6 +85,54 @@ static void LuaCursorTo(Point pos, bool holdingLeft, bool holdingRight = false)
     lua_pop(context->GetLua(), 7);
 }
 
+static std::vector<CrewBox*> *PlayerCrewBoxes(CApp *app)
+{
+    if (!app->gui || app->menu.bOpen || app->langChooser.bOpen) return nullptr;
+    return &app->gui->crewControl.crewBoxes;
+}
+
+static void NoteRightClickTargets(CApp *app)
+{
+    RightClickTargets targets;
+    if (std::vector<CrewBox*> *boxes = PlayerCrewBoxes(app))
+    {
+        for (CrewBox *box : *boxes) targets.rects.push_back(box->box);
+    }
+    targets.xBar = app->x_bar;
+    targets.yBar = app->y_bar;
+    targets.modifierX = app->modifier_x;
+    targets.modifierY = app->modifier_y;
+    targets.mouseModifierX = app->mouseModifier_x;
+    targets.mouseModifierY = app->mouseModifier_y;
+    std::lock_guard<std::mutex> lock(g_rightLock);
+    g_rightTargets = std::move(targets);
+}
+
+static void CrewBoxRightButton(CApp *app, bool down, Point pos)
+{
+    CustomCommandGui *custom = CustomCommandGui::GetInstance();
+    custom->draggingCrewMember = nullptr;
+    std::vector<CrewBox*> *boxes = PlayerCrewBoxes(app);
+    if (!down || !boxes) return;
+    for (CrewBox *box : *boxes)
+    {
+        if (IpadUI::Contains(box->box, pos.x, pos.y)) custom->draggingCrewMember = box->pCrew;
+    }
+}
+
+static void CrewBoxDrag(CApp *app, Point pos)
+{
+    CrewMember *dragging = CustomCommandGui::GetInstance()->draggingCrewMember;
+    std::vector<CrewBox*> *boxes = PlayerCrewBoxes(app);
+    if (!dragging || !boxes || boxes->empty()) return;
+    size_t index = 0;
+    while (index + 1 < boxes->size() && pos.y >= (*boxes)[index + 1]->box.y) index++;
+    if ((*boxes)[index]->pCrew == dragging) return;
+    G_->GetCrewFactory()->MoveCrewMemberToSpot(dragging, (*boxes)[index]->pCrew);
+    app->gui->crewControl.ClearCrewBoxes();
+    app->gui->crewControl.UpdateCrewBoxes();
+}
+
 static void Forward(CApp *app, const HeldTouch &t)
 {
     g_forwarding = true;
@@ -104,8 +162,11 @@ static void Release(CApp *app)
         g_held.pop_front();
         if (t.kind == TouchKind::RightDown || t.kind == TouchKind::RightUp)
         {
-            LuaButton(t.kind == TouchKind::RightDown ? InternalEvents::ON_MOUSE_R_BUTTON_DOWN : InternalEvents::ON_MOUSE_R_BUTTON_UP,
-                      app->TranslateMouse(t.x, t.y));
+            Point pos = app->TranslateMouse(t.x, t.y);
+            if (!LuaButton(t.kind == TouchKind::RightDown ? InternalEvents::ON_MOUSE_R_BUTTON_DOWN : InternalEvents::ON_MOUSE_R_BUTTON_UP, pos))
+            {
+                CrewBoxRightButton(app, t.kind == TouchKind::RightDown, pos);
+            }
             continue;
         }
         bool luaTouch = t.id == g_luaTouch;
@@ -171,6 +232,20 @@ extern "C" __attribute__((visibility("default"))) int hs_android_wants_right_cli
     return g_luaWantsRight.load();
 }
 
+extern "C" __attribute__((visibility("default"))) int hs_android_wants_right_click_at(int x, int y)
+{
+    if (g_luaWantsRight.load()) return 1;
+    std::lock_guard<std::mutex> lock(g_rightLock);
+    const RightClickTargets &t = g_rightTargets;
+    int mX = (int)(t.mouseModifierX * (x - t.xBar)) - t.modifierX;
+    int mY = (int)(t.mouseModifierY * (y - t.yBar)) - t.modifierY;
+    for (const Globals::Rect &rect : t.rects)
+    {
+        if (IpadUI::Contains(rect, mX, mY)) return 1;
+    }
+    return 0;
+}
+
 extern "C" __attribute__((visibility("default"))) void hs_android_right_button(int action, int x, int y)
 {
     std::lock_guard<std::mutex> lock(g_rightLock);
@@ -187,7 +262,11 @@ static void TakeRightButtonEvents(CApp *app)
     for (const RightButtonEvent &e : events)
     {
         LuaCursorTo(app->TranslateMouse(e.x, e.y), false, e.action != HS_RIGHT_BUTTON_DOWN);
-        if (e.action == HS_RIGHT_BUTTON_MOVE) continue;
+        if (e.action == HS_RIGHT_BUTTON_MOVE)
+        {
+            CrewBoxDrag(app, app->TranslateMouse(e.x, e.y));
+            continue;
+        }
         g_held.push_back({e.action == HS_RIGHT_BUTTON_DOWN ? TouchKind::RightDown : TouchKind::RightUp, -1, e.x, e.y, e.x, e.y, false});
     }
 }
@@ -196,6 +275,7 @@ HOOK_METHOD_PRIORITY(CApp, OnLoop, -1000, () -> void)
 {
     LOG_HOOK("HOOK_METHOD_PRIORITY -> CApp::OnLoop -> Begin (TouchToLua.cpp)\n")
     g_luaWantsRight = LuaWantsRightClicks();
+    NoteRightClickTargets(this);
     TakeRightButtonEvents(this);
     Release(this);
     g_onLuaButton = false;
