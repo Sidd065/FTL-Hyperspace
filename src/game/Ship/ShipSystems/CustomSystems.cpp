@@ -5,6 +5,9 @@
 #include "CustomShipSelect.h"
 #include "CustomShips.h"
 #include "SystemBox_Extend.h"
+#ifdef HS_ANDROID
+#include "android/IpadUI.h"
+#endif
 #include <boost/lexical_cast.hpp>
 
 #include <cmath>
@@ -330,6 +333,42 @@ ShipSystem:0064f3f6(c),
 the functions above should be rewritten eventually to call the hook correctly
 */
 #ifdef HS_APPLE_GAME
+static void SetColorIconPrimitives(ShipSystem *system, const std::string &sysName)
+{
+    std::string color;
+    GL_Texture* tex;
+
+    int i = 0;
+    while (i != 5)
+    {
+        switch (i)
+        {
+            case 0:
+                color = "_green";
+                break;
+            case 1:
+                color = "_grey";
+                break;
+            case 2:
+                color = "_orange";
+                break;
+            case 3:
+                color = "_red";
+                break;
+            case 4:
+                color = "_blue";
+                break;
+        }
+
+        // system->iconPrimitives is actually a [5][2][2] array instead of [20] - therefore this cast is needed
+        tex =  G_->GetResources()->GetImageId("icons/s_" + sysName + color + "1.png");
+        ((GL_Primitive* (*)[2][2])system->iconPrimitives)[i][0][0] = G_->GetResources()->CreateImagePrimitive(tex, 0, 0, 0, COLOR_WHITE, 1.f, false);
+        tex =  G_->GetResources()->GetImageId("icons/s_" + sysName + color + "2.png");
+        ((GL_Primitive* (*)[2][2])system->iconPrimitives)[i][1][0] = G_->GetResources()->CreateImagePrimitive(tex, 0, 0, 0, COLOR_WHITE, 1.f, false);
+        i++;
+    }
+}
+
 HOOK_METHOD_PRIORITY(ShipSystem, constructor, 9998, (int type, int roomId, int shipId, int starting_power) -> void)
 {
     LOG_HOOK("HOOK_METHOD_PRIORITY -> ShipSystem::constructor -> Begin (CustomSystems.cpp)\n")
@@ -340,7 +379,6 @@ HOOK_METHOD_PRIORITY(ShipSystem, constructor, 9998, (int type, int roomId, int s
     if (this->GetId() >= SYS_TEMPORAL)
     {
         std::string sysName = this->GetName();
-        std::string color;
         GL_Texture* tex;
 
         this->imageIcon =  G_->GetResources()->GetImageId("icons/s_" + sysName + ".png");
@@ -349,36 +387,19 @@ HOOK_METHOD_PRIORITY(ShipSystem, constructor, 9998, (int type, int roomId, int s
         tex =  G_->GetResources()->GetImageId("icons/s_" + sysName + "_overlay2.png");
         this->iconBorderPrimitive = G_->GetResources()->CreateImagePrimitive(tex, this->location.x - (tex->width_ / 2), this->location.y - (tex->height_ / 2), 0, COLOR_WHITE, 1.f, false);
 
-        int i = 0;
-        while (i != 5)
-        {
-            switch (i)
-            {
-                case 0:
-                    color = "_green";
-                    break;
-                case 1:
-                    color = "_grey";
-                    break;
-                case 2:
-                    color = "_orange";
-                    break;
-                case 3:
-                    color = "_red";
-                    break;
-                case 4:
-                    color = "_blue";
-                    break;
-            }
-
-            // this->iconPrimitives is actually a [5][2][2] array instead of [20] - therefore this cast is needed
-            tex =  G_->GetResources()->GetImageId("icons/s_" + sysName + color + "1.png");
-            ((GL_Primitive* (*)[2][2])iconPrimitives)[i][0][0] = G_->GetResources()->CreateImagePrimitive(tex, 0, 0, 0, COLOR_WHITE, 1.f, false);
-            tex =  G_->GetResources()->GetImageId("icons/s_" + sysName + color + "2.png");
-            ((GL_Primitive* (*)[2][2])iconPrimitives)[i][1][0] = G_->GetResources()->CreateImagePrimitive(tex, 0, 0, 0, COLOR_WHITE, 1.f, false);
-            i++;
-        }
+        SetColorIconPrimitives(this, sysName);
     }
+#ifdef HS_ANDROID
+    else if (IpadUI::PackageHas("img/icons/s_" + this->GetName() + "_green1.png"))
+    {
+        for (int i = 0; i < 5; i++)
+        {
+            CSurface::GL_DestroyPrimitive(((GL_Primitive* (*)[2][2])iconPrimitives)[i][0][0]);
+            CSurface::GL_DestroyPrimitive(((GL_Primitive* (*)[2][2])iconPrimitives)[i][1][0]);
+        }
+        SetColorIconPrimitives(this, this->GetName());
+    }
+#endif
 }
 #endif
 
