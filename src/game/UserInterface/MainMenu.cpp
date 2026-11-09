@@ -1,4 +1,7 @@
 #include "MainMenu.h"
+#ifdef HS_ANDROID
+#include "android/IpadUI.h"
+#endif
 #include <boost/lexical_cast.hpp>
 
 CustomMainMenu CustomMainMenu::instance = CustomMainMenu();
@@ -57,6 +60,7 @@ static const int iPadTitleWidth = 1376, iPadTitleHeight = 768;
 static const float iPadTitleLeft = -176.f;
 static const float iPadTitleScaleX = iPadTitleWidth / 1280.f;
 static const float iPadTitleScaleY = iPadTitleHeight / 720.f;
+static const int pcMenuButtonsRight = 1200;
 #endif
 
 #if !defined(__linux__) || defined(HS_APPLE_GAME)
@@ -109,12 +113,29 @@ HOOK_METHOD(MainMenu, Open, () -> bool)
     {
         background->width_ = iPadTitleWidth;
         background->height_ = iPadTitleHeight;
+        for (Button *button : {&continueButton, &startButton, &helpButton, &statButton, &optionsButton, &creditsButton})
+        {
+            button->SetLocation(Point(button->position.x, button->position.y * iPadTitleScaleY));
+        }
     }
     return ret;
 #else
     return super();
 #endif
 }
+
+#ifdef HS_ANDROID
+HOOK_METHOD(MainMenu, UpdateButtonLanguage, (Button *button, const std::string &filename) -> void)
+{
+    LOG_HOOK("HOOK_METHOD -> MainMenu::UpdateButtonLanguage -> Begin (MainMenu.cpp)\n")
+    super(button, filename);
+    if (CustomMainMenu::GetInstance()->customTitleScreen)
+    {
+        int right = std::min(iPadTitleLeft + pcMenuButtonsRight * iPadTitleScaleX, IpadUI::ScreenRight() - 20.f);
+        button->SetLocation(Point(right - button->imageSize.x, button->position.y));
+    }
+}
+#endif
 
 /* Rewrote this to debug the crash, leaving this in in case someone needs this in the future
 HOOK_METHOD_PRIORITY(ResourceControl, RenderImage, 9999, (GL_Texture* image, int x, int y, int rotation, GL_Color color, float alpha, bool mirror) -> void)
