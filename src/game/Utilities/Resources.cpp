@@ -1122,6 +1122,21 @@ void ResourceControl::RenderImageString(const std::string& imageName, int x, int
     RenderImage(GetImageId(imageName), x, y, rotation, color, alpha, mirror);
 }
 
+HOOK_METHOD(ResourceControl, LoadImage, (const std::string& path) -> GL_Texture*)
+{
+    LOG_HOOK("HOOK_METHOD -> ResourceControl::LoadImage -> Begin (Resources.cpp)\n")
+    GL_Texture* tex = super(path);
+    if (tex || !boost::starts_with(path, "img/") || boost::starts_with(path, "img/loc-") || boost::starts_with(path, "img/ipad/"))
+    {
+        return tex;
+    }
+
+    std::string ipadPath = "img/ipad/" + path.substr(4);
+    EnsureImageLoaded(ipadPath);
+    auto it = images.find(ipadPath);
+    return it != images.end() ? it->second : nullptr;
+}
+
 HOOK_METHOD(ResourceControl, GetImageId, (const std::string& name) -> GL_Texture*)
 {
     LOG_HOOK("HOOK_METHOD -> ResourceControl::GetImageId -> Begin (Resources.cpp)\n")
