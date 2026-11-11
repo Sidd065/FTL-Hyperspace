@@ -5884,11 +5884,7 @@ HOOK_METHOD(CreditScreen, Start, (const std::string& shipName, const std::vector
 
 
     // select background image:
-#ifdef HS_ANDROID
-    bg = G_->GetResources()->GetImageId(replaceCreditsBackground.empty() ? "ipad/stars/bg_darknebula.png" : replaceCreditsBackground);
-#else
     bg = G_->GetResources()->GetImageId(replaceCreditsBackground.empty() ? "stars/bg_darknebula.png" : replaceCreditsBackground);
-#endif
 
 
     // Parse crewString with patch:
