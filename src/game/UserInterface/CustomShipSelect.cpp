@@ -1401,7 +1401,9 @@ void CustomShipSelect::OnRender(bool renderSelect)
         }
     }
 
+#ifndef HS_ANDROID
     shipSelect->infoBox.OnRender();
+#endif
 
     if (shipSelect->tutorial.bOpen)
     {
