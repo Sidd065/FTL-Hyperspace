@@ -2427,6 +2427,11 @@ HOOK_METHOD(ShipSelect, SelectShip, (int shipType) -> void)
         return super(-1);
     }
     super(shipType);
+    if (shipType >= 100 && currentType == 0 && !G_->GetScoreKeeper()->GetShipUnlocked(shipType, 0))
+    {
+        ShipBlueprint *bp = G_->GetBlueprints()->GetShipBlueprint(G_->GetScoreKeeper()->GetShipBlueprint(shipType), -1);
+        infoBox.SetText(infoBox.desc.title.GetText(), bp->unlock.GetText(), 360, 176, InfoBox::ExpandDir::EXPAND_DOWN);
+    }
 }
 #endif
 
